@@ -1,0 +1,88 @@
+#pragma once
+#include <JuceHeader.h>
+
+class Arpeggiator
+{
+
+public:
+
+    Arpeggiator();
+    ~Arpeggiator();
+
+    void prepareToPlay(double sampleRate, int samplesPerBlock);
+    void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&);
+
+    enum class Mode { Up, Down, Random, Chord };
+    enum class ClockMode { Internal, Midi };
+
+    void setEnabled(bool shouldRun)  noexcept { enabled = shouldRun; }
+    void setOctaves(int num)         noexcept { octaves = juce::jmax(1, num); }
+    void setMode(Mode m)             noexcept { mode = m; }
+    void setClockMode(ClockMode m)   noexcept { clockMode = m; }
+    void setDivisionIndex(int idx)   noexcept;
+    void setDivisionTicks(int ticks) noexcept { ticksPerStep = juce::jmax(1, ticks); }
+    void setTempo(float bpm)         noexcept { tempo = juce::jlimit(60.0f, 200.0f, bpm); }
+
+    /** Enable / disable latch mode.
+        When on, note-offs don't remove notes from the arp pool.
+        Turning latch off reverts the pool to only physically-held keys. */
+    void setGateTime(float gt) noexcept { gateTime = juce::jlimit(0.05f, 0.99f, gt); }
+    float getGateTime() const noexcept { return gateTime; }
+
+    void setLatch(bool l) noexcept {
+        latch = l;
+        if (!l) {
+            // Keep only the notes still physically held so the arp continues
+            // for held keys but stops if all keys have been released.
+            notes.clearQuick();
+            for (int n : physicallyHeld) notes.add(n);
+        }
+    }
+    bool getLatch() const noexcept { return latch; }
+
+    /** Clear all held notes and reset playback state (call on preset change). */
+    void panic() noexcept { notes.clearQuick(); sentChordNotes.clearQuick(); physicallyHeld.clearQuick(); lastNote = -1; currentNote = -1; sentNote = -1; noteIsOn = false; gateCountdown = -1; }
+    float getTempo() const           noexcept { return tempo; }
+
+    /** Call this before processBlock to provide host transport info. */
+    void setPlayHead(juce::AudioPlayHead* ph) noexcept { playHead = ph; }
+
+private:
+
+    bool enabled = true;
+    int  octaves = 1;
+
+    Mode       mode = Mode::Up;
+    ClockMode  clockMode = ClockMode::Internal;
+
+    float sampleRate = 44100.f;
+    int   timeSamples = 0;
+    int   clockCounter = 0;
+    int   ticksPerStep = 6;  // default: 1/16 bei 24 PPQN
+    bool  isPlaying = false;
+    float tempo = 120.0f;    // BPM for internal clock
+
+    bool latch = false;
+    float gateTime = 0.8f;      // fraction of step duration (0.05–0.99)
+    int   gateCountdown = -1;   // samples from next block start until gate note-off, -1 = not pending
+    bool  noteIsOn = false;     // whether arp notes are currently sounding
+
+    juce::Array<int> notes;
+    juce::Array<int> physicallyHeld;   // keys actually depressed (latch bookkeeping)
+    juce::Array<int> sentChordNotes;   // actual MIDI note numbers currently sounding (incl. octave offset)
+    int sentNote = -1;                 // actual MIDI note number for single-note mode
+    int currentNote = -1;
+    int lastNote = -1;
+    int direction = 1;
+    int octave = 0;
+
+    juce::AudioPlayHead* playHead = nullptr;
+
+    // Host sync state
+    double lastPpqPosition = -1.0;
+
+    /** Returns the step length in quarter notes for the current division. */
+    double getStepLengthInQuarterNotes() const noexcept;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Arpeggiator)
+};

@@ -1,0 +1,113 @@
+#pragma once
+#include "../JuceLibraryCode/JuceHeader.h"
+#include "PluginProcessor.h"
+#include "AudioEngine/LupoSynth.h"
+#include "MainUI.h"
+#include <vector>
+#include <memory>
+#include <map>
+
+class AttachmentFactory
+{
+public:
+    AttachmentFactory(LupoAudioProcessor* processor, LupoSynth* lupo)
+        : processor(processor), lupo(lupo)
+    {
+    }
+
+    void clearAttachments() {
+        attachments.clear();
+        buttonAttachments.clear();
+        comboAttachments.clear();
+        componentToParam.clear();
+    }
+
+    // Returns the parameter ID bound to this slider, or empty string if not registered.
+    String getParamForComponent(Component* comp) const {
+        auto it = componentToParam.find(comp);
+        return (it != componentToParam.end()) ? it->second : String();
+    }
+
+    void initState() {
+        // Only initialize state if it hasn't been set up yet.
+        // Replacing an existing state tree would destroy all parameter values
+        // and crash when attachments or listeners reference the old state.
+        if (!processor->getValueTreeState()->state.isValid()) {
+            processor->getValueTreeState()->state = ValueTree(Identifier("default"));
+        }
+    }
+
+    void createParam(String name, String label, float min, float max, float defaultValue, float skew = 1.0f) {
+        processor->getValueTreeState()->createAndAddParameter(
+            name, name, label,
+            NormalisableRange<float>(min, max, 0.0f, skew),
+            defaultValue, nullptr, nullptr
+        );
+        processor->getValueTreeState()->addParameterListener(name, lupo);
+    }
+
+    void createSliderAttachment(String name, Slider* comp) {
+        attachments.push_back(
+            std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(
+                *processor->getValueTreeState(), name, *comp
+            )
+        );
+        componentToParam[comp] = name;
+    }
+
+    void createComboAttachment(String name, ComboBox* comp) {
+        comboAttachments.push_back(
+            std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(
+                *processor->getValueTreeState(), name, *comp
+            )
+        );
+    }
+
+    void createButtonAttachment(String name, Button* comp) {
+        buttonAttachments.push_back(
+            std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(
+                *processor->getValueTreeState(), name, *comp
+            )
+        );
+    }
+
+    LupoSynth* getSynth() {
+        return lupo;
+    }
+
+    AudioProcessorValueTreeState* getValueTreeState() {
+        return processor->getValueTreeState();
+    }
+
+    StringArray getSliderParams() {
+        return {
+            "cutoff1","resonance1","mainVolume","envAmt1",
+            "cutoff2","resonance2","envAmt2",
+            "ampAttack","ampDecay","ampSustain","ampRelease",
+            "auxAttack1", "auxDecay1","auxSustain1","auxRelease1",
+            "auxAttack2", "auxDecay2","auxSustain2","auxRelease2",
+            "lfo1Shape", "lfo1Speed","lfo1Amount",
+            "lfo2Shape", "lfo2Speed","lfo2Amount",
+            "lfo3Shape", "lfo3Speed","lfo3Amount",
+            "osc1Pitch","osc1Fine","osc1Volume","osc1Pan",
+            "osc2Pitch","osc2Fine","osc2Volume","osc2Pan",
+            "osc3Pitch","osc3Fine","osc3Volume","osc3Pan",
+            "osc4Pitch","osc4Fine","osc4Volume","osc4Pan",
+            "dlyTimeLeft", "dlyTimeRight", "dlyFeedback","dlyMix",
+            "rvbRoomSize", "rvbDamping", "rvbWetLevel", "rvbDryLevel", "rvbWidth", "rvbFreezeMode",
+            "chrDelay", "chrModulation", "chrFeedback", "chrMix",
+            "filterMode","cutoffLink",
+            "filterMode1","filterMode2",
+            "filterChar1","filterChar2"
+        };
+    }
+
+private:
+    std::vector<std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment>> attachments;
+    std::vector<std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment>> buttonAttachments;
+    std::vector<std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment>> comboAttachments;
+    std::map<Component*, String> componentToParam;
+
+    LupoAudioProcessor* processor;
+    LupoSynth* lupo;
+};

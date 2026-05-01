@@ -1,0 +1,49 @@
+# Build outputs
+build/
+build-*/
+cmake-build-*/
+Builds/
+JuceLibraryCode/
+
+# IDE
+.vscode/
+.idea/
+.vs/
+*.user
+*.suo
+
+# Xcode
+xcuserdata/
+DerivedData/
+*.xcuserstate
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# Plugin binaries
+*.vst3
+*.vst
+*.component
+*.aaxplugin
+*.au
+*.dll
+*.dylib
+*.so
+*.exe
+
+# Object / artifacts
+*.o
+*.obj
+*.a
+*.lib
+*.pdb
+*.ilk
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

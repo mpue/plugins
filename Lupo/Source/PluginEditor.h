@@ -1,0 +1,57 @@
+﻿/*
+  ==============================================================================
+
+    This file was auto-generated!
+
+    It contains the basic framework code for a JUCE plugin editor.
+
+  ==============================================================================
+*/
+
+#pragma once
+
+#include "../JuceLibraryCode/JuceHeader.h"
+#include "PluginProcessor.h"
+#include "MainUI.h"
+#include "TrioLookAndFeel.h"
+#include "RetroLookAndFeel.h"
+#include "SciFiLookAndFeel.h"
+#include "CyberpunkLookAndFeel.h"
+#include "ElegantDarkLookAndFeel.h"
+
+
+class AttachmentFactory;
+
+//==============================================================================
+/**
+*/
+class LupoAudioProcessorEditor  : public AudioProcessorEditor
+{
+public:
+    LupoAudioProcessorEditor (LupoAudioProcessor&);
+    ~LupoAudioProcessorEditor();
+
+    //==============================================================================
+    void paint (Graphics&) override;
+    void resized() override;
+    void saveSettings();
+    void loadSettings();
+
+private:
+    // This reference is provided as a quick way for your editor to
+    // access the processor object that created it.
+    LupoAudioProcessor& processor;
+	std::unique_ptr<MainUI> mainUI = nullptr;
+	ElegantDarkLookAndFeel edlf;
+	TrioLookAndFeel tlf;
+    RetroLookAndFeel rlf;
+	SciFiLookAndFeel sflf;
+    CyberpunkLookAndFeel cyberpunkLaf;  // Our epic cyberpunk look and feel!
+    // ──────────────────────────────────────────────────────────────────────────────
+
+
+	
+	AttachmentFactory* factory;
+	ComponentBoundsConstrainer sizeConstrainer;
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LupoAudioProcessorEditor)
+};
