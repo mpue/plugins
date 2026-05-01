@@ -5,6 +5,9 @@ cmake-build-*/
 Builds/
 JuceLibraryCode/
 
+# Generated installer (root-level only; Lupo/Installer/ is kept)
+/Installer/
+
 # IDE
 .vscode/
 .idea/
