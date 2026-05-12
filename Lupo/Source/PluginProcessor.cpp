@@ -143,6 +143,16 @@ LupoAudioProcessor::LupoAudioProcessor()
 	factory->createParam("portamentoTime",   "Portamento Duration",  0.0f, 2.0f, 0.5f);
 	factory->createParam("portamentoAmount", "Portamento Intensity", 0.0f, 1.0f, 0.0f);
 
+	// Analog character: filter drive + master soft-clip
+	factory->createParam("filterDrive1", "Filter 1 Drive", 0.0f, 24.0f, 0.0f);
+	factory->createParam("filterDrive2", "Filter 2 Drive", 0.0f, 24.0f, 0.0f);
+	factory->createParam("masterDrive",  "Master Drive",   0.0f,  1.0f, 0.0f);
+
+	// Voice unison: stack N detuned voices per note for analog fatness
+	factory->createParam("unisonVoices", "Unison Voices",  1.0f,  5.0f, 1.0f);
+	factory->createParam("unisonDetune", "Unison Detune",  0.0f, 50.0f, 0.0f);
+	factory->createParam("unisonSpread", "Unison Spread",  0.0f,  1.0f, 0.0f);
+
 	factory->createParam("arpEnabled", "Arp enabled", 0, 1.0, 0);
 	factory->createParam("arpSpeed", "Arp speed", 0, 3.0, 2);  // Changed from 0, 1.0, 0 to 0, 3.0, 2 to match speedSlider range
 	factory->createParam("arpTempo", "Arp tempo", 60.0f, 200.0f, 120.0f);

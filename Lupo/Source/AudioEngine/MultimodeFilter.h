@@ -50,6 +50,11 @@ public:
 	void setCutoffModulation(float value);
 	void processSampleStereo(float& left, float& right);
 
+	// Pre-filter drive in dB (0..24). 0 = clean, 24 = heavy saturation. Adds tanh
+	// saturation in front of the filter and compensates with makeup gain so output
+	// level stays roughly constant.
+	void setDrive(float driveDb);
+
 	virtual void processModulation() override;
 
 private:
@@ -74,6 +79,10 @@ private:
 
     std::unique_ptr<CharacterFilter> charFilter;
     CharacterFilter::Character character = CharacterFilter::STANDARD;
+
+    // Drive (linear pre-gain) and matching makeup gain. Default = 1.0 = unity (no drive).
+    float drivePreGain  = 1.0f;
+    float driveMakeup   = 1.0f;
 
     JUCE_LEAK_DETECTOR(MultimodeFilter);
     

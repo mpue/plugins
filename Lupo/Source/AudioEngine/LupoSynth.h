@@ -141,6 +141,15 @@ private:
 	float* leftOut;
 	float* rightOut;
 
+	// Master soft-clip glue. driveAmount in [0..1] maps to a tanh saturation
+	// curve that becomes audible above ~0.5. 0 = bypass.
+	float masterDriveAmount = 0.0f;
+
+	// Voice unison (read in processMidi for note-on allocation)
+	int   unisonVoiceCount = 1;
+	float unisonDetuneCents = 0.0f;
+	float unisonStereoSpread = 0.0f;
+
 	float elapsed;
 	float lastTime;
 	float currentTime;

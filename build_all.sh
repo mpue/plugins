@@ -18,7 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 # ── All plugins in the repo (subdir name == .jucer name) ─────────────────────
-ALL_PLUGINS=(AF-1 BC-1 CH-1 CP-1 DL-1 EQ8 LT-1 Lupo PS-1 RV-1 ST-1 SW-1 TS-1)
+ALL_PLUGINS=(AF-1 BC-1 CH-1 CP-1 DL-1 EQ8 LT-1 Lupo PS-1 RV-1 ST-1 SW-1 TS-1 KM-1)
 ALL_FORMATS=(AU VST3)
 
 # ── Args ─────────────────────────────────────────────────────────────────────

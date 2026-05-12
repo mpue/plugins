@@ -9,6 +9,7 @@
 
 #include "MultimodeFilter.h"
 #include "ADSR.h"
+#include <cmath>
 
 MultimodeFilter::MultimodeFilter() {
 
@@ -83,17 +84,32 @@ void MultimodeFilter::coefficients(float sampleRate, float frequency, float reso
 
 void MultimodeFilter::processStereo(float *const left, float *const right, const int numSamples) {
     if (this->enabled) {
+        // Pre-filter drive: tanh saturation. Skip the per-sample work when drive is unity.
+        if (drivePreGain > 1.0001f) {
+            for (int i = 0; i < numSamples; ++i) {
+                left[i]  = std::tanh(left[i]  * drivePreGain);
+                right[i] = std::tanh(right[i] * drivePreGain);
+            }
+        }
+
         if (this->mode == Mode::LOWPASS) {
             this->lowPassLeftStage1->process(left, numSamples);
             this->lowPassRightStage1->process(right, numSamples);
 			this->lowPassLeftStage2->process(left, numSamples);
 			this->lowPassRightStage2->process(right, numSamples);
-			
+
 		}
         else {
             this->highPassLeft->process(left, numSamples);
             this->highPassRight->process(right, numSamples);
-        }   
+        }
+
+        if (driveMakeup < 0.9999f) {
+            for (int i = 0; i < numSamples; ++i) {
+                left[i]  *= driveMakeup;
+                right[i] *= driveMakeup;
+            }
+        }
     }
 }
 
@@ -154,13 +170,17 @@ void MultimodeFilter::processSampleStereo(float& left, float& right)
 {
 	if (!enabled) return;
 
+	// Pre-filter drive (tanh saturation). drivePreGain == 1 means clean.
+	if (drivePreGain > 1.0001f) {
+		left  = std::tanh(left  * drivePreGain);
+		right = std::tanh(right * drivePreGain);
+	}
+
 	if (character != CharacterFilter::STANDARD)
 	{
 		charFilter->processSample(left, right);
-		return;
 	}
-
-	if (mode == LOWPASS) {
+	else if (mode == LOWPASS) {
 		left  = lowPassLeftStage1->processSample(left);
 		left  = lowPassLeftStage2->processSample(left);
 		right = lowPassRightStage1->processSample(right);
@@ -169,6 +189,20 @@ void MultimodeFilter::processSampleStereo(float& left, float& right)
 		left  = highPassLeft->processSample(left);
 		right = highPassRight->processSample(right);
 	}
+
+	if (driveMakeup < 0.9999f) {
+		left  *= driveMakeup;
+		right *= driveMakeup;
+	}
+}
+
+void MultimodeFilter::setDrive(float driveDb)
+{
+	float clamped = juce::jlimit(0.0f, 24.0f, driveDb);
+	drivePreGain  = juce::Decibels::decibelsToGain(clamped);
+	// Compensate roughly half the drive in makeup so the user still hears
+	// the saturation but the level doesn't run away.
+	driveMakeup   = juce::Decibels::decibelsToGain(-clamped * 0.5f);
 }
 
 void MultimodeFilter::processModulation()

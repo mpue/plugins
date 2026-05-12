@@ -85,6 +85,13 @@ public:
 	void setOscSpread(int osc, float spread);
 	void setOscWidth(int osc, float width);
 
+	// Per-note unison detune (in cents) applied on top of MIDI note before frequency conversion.
+	void setUnisonOffset(float cents);
+	float getUnisonOffset() const { return unisonOffsetCents; }
+
+	// Per-note unison pan offset in [-1..+1], scales the per-osc pan towards a stereo position.
+	void setUnisonPan(float pan);
+
     void setFilterRouting(FilterRouting routing) { filterRouting = routing; }
     FilterRouting getFilterRouting() const { return filterRouting; }
 
@@ -130,6 +137,13 @@ private:
 	float portamentoAmount = 0.0f;   // intensity 0=off, 1=full
 	float currentMidiNote  = -1.0f;  // current glide position (-1 = uninitialized)
 	float targetMidiNote   = 0.0f;
+
+	// Unison
+	float unisonOffsetCents = 0.0f;  // detune in cents, applied to all oscillators of this voice
+	float unisonPan         = 0.0f;  // [-1..+1] pan offset
+
+	// Anti-click ramp: short linear gain ramp from 0 to 1 on note-on
+	juce::LinearSmoothedValue<float> noteOnGate;
 };
 
 

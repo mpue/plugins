@@ -20,6 +20,7 @@
 #include "Sampler.h"
 #include "../ModMatrix.h"
 #include "Modulation.h"
+#include <cmath>
 
 
 #ifndef M_PI
@@ -242,42 +243,70 @@ void LupoSynth::processMidi(MidiBuffer& midiMessages) {
 					voice->getAmpEnvelope()->gate(false);
 					voice->getFilterEnvelope()->gate(false);
 					voice->setPlaying(false);
-					break;
 				}
-			}
-
-			Voice* voice = findFreeVoice(noteNumber);
-
-			// Voice stealing: if no free voice, steal the oldest one in release phase
-			if (voice == nullptr) {
-				for (auto& v : voices) {
-					if (!v->isPlaying() && v->getAmpEnvelope()->getState() != SynthLab::ADSR::env_idle) {
-						voice = v.get();
-						voice->getAmpEnvelope()->reset();
-						voice->getFilterEnvelope()->reset();
-						break;
-					}
-				}
-			}
-
-			// Last resort: steal any voice (oldest playing)
-			if (voice == nullptr && !voices.empty()) {
-				voice = voices[0].get();
-				voice->getAmpEnvelope()->reset();
-				voice->getFilterEnvelope()->reset();
-				voice->setPlaying(false);
 			}
 
 			if (noteNumber > highestNote) {
 				highestNote = noteNumber;
 			}
 
-			if (voice) {
-				// Retrigger modulation envelopes on every note-on so the filter
-				// envelope restarts regardless of how many voices are already playing.
-				for (auto& env : modEnvelopes) {
-					env->reset();
-					env->gate(true);
+			// Unison: allocate `unisonVoiceCount` voices for this single MIDI note,
+			// each detuned in cents and panned across the stereo field. count==1
+			// reproduces classic single-voice behaviour.
+			const int  uCount   = juce::jlimit(1, 5, unisonVoiceCount);
+			const float uDetune = unisonDetuneCents;
+			const float uSpread = unisonStereoSpread;
+
+			bool envelopesRetriggered = false;
+
+			for (int u = 0; u < uCount; ++u)
+			{
+				Voice* voice = findFreeVoice(noteNumber);
+
+				// Voice stealing: if no free voice, steal the oldest one in release phase
+				if (voice == nullptr) {
+					for (auto& v : voices) {
+						if (!v->isPlaying() && v->getAmpEnvelope()->getState() != SynthLab::ADSR::env_idle) {
+							voice = v.get();
+							voice->getAmpEnvelope()->reset();
+							voice->getFilterEnvelope()->reset();
+							break;
+						}
+					}
+				}
+
+				// Last resort: steal any voice
+				if (voice == nullptr && !voices.empty()) {
+					voice = voices[u % (int)voices.size()].get();
+					voice->getAmpEnvelope()->reset();
+					voice->getFilterEnvelope()->reset();
+					voice->setPlaying(false);
+				}
+
+				if (!voice) break;
+
+				// Symmetric cent + pan spread around centre.
+				//   1 voice  -> [0]
+				//   2 voices -> [-1, +1]
+				//   3 voices -> [-1, 0, +1]
+				//   etc.
+				float norm = (uCount == 1) ? 0.0f
+				                            : ((float)u / (float)(uCount - 1)) * 2.0f - 1.0f;
+				voice->setUnisonOffset(norm * uDetune);
+				voice->setUnisonPan(norm * uSpread);
+
+				// Retrigger global mod envelopes / LFOs only on the first allocated
+				// voice — re-resetting per unison voice would re-trigger envelopes
+				// repeatedly mid-block.
+				if (!envelopesRetriggered) {
+					for (auto& env : modEnvelopes) {
+						env->reset();
+						env->gate(true);
+					}
+					lfo1->reset();
+					lfo2->reset();
+					lfo3->reset();
+					envelopesRetriggered = true;
 				}
 
 				voice->setPlaying(true);
@@ -286,14 +315,11 @@ void LupoSynth::processMidi(MidiBuffer& midiMessages) {
 				voice->getAmpEnvelope()->gate(true);
 				voice->getFilterEnvelope()->gate(true);
 				voice->setNoteAndVelocity(noteNumber, m.getVelocity());
-				velocityMod->setValue(m.getVelocity() / 127.0f);
 				voice->setDuration(250);
 				voice->setTime(elapsed);
-				lfo1->reset();
-				lfo2->reset();
-				lfo3->reset();
 			}
 
+			velocityMod->setValue(m.getVelocity() / 127.0f);
 		}
 		else if (m.isAllNotesOff() || m.isAllSoundOff())
 		{
@@ -314,12 +340,12 @@ void LupoSynth::processMidi(MidiBuffer& midiMessages) {
 		{
 			int noteNumber = juce::jlimit(0, 127, m.getNoteNumber() + globalTranspose);
 
+			// Release ALL voices on this note (unison can allocate several per note).
 			for (auto& voice : voices) {
 				if (voice->isPlaying() && voice->getNoteNumber() == noteNumber) {
 					voice->getAmpEnvelope()->gate(false);
 					voice->getFilterEnvelope()->gate(false);
 					voice->setPlaying(false);
-					break;
 				}
 			}
 
@@ -449,6 +475,19 @@ void LupoSynth::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessage
 				leftChannel[sample] += voiceBuffer.getSample(0, sample) * gain;
 				rightChannel[sample] += voiceBuffer.getSample(1, sample) * gain;
 			}
+		}
+	}
+
+	// Master soft-clip glue: gentle tanh saturation across the summed voices.
+	// Maps masterDriveAmount [0..1] to a pre-gain of 1..3, with matching
+	// makeup so unity drive == roughly unity output level. This adds 2nd/3rd
+	// harmonic content that fattens dense polyphonic mixes.
+	if (masterDriveAmount > 0.001f) {
+		const float pre   = 1.0f + masterDriveAmount * 2.0f;       // 1..3
+		const float postLin = 1.0f / (1.0f + masterDriveAmount * 1.0f); // light makeup
+		for (int sample = 0; sample < numSamples; ++sample) {
+			leftChannel[sample]  = std::tanh(leftChannel[sample]  * pre) * postLin;
+			rightChannel[sample] = std::tanh(rightChannel[sample] * pre) * postLin;
 		}
 	}
 
@@ -1026,6 +1065,32 @@ void LupoSynth::parameterChanged(const String& parameterID, float newValue)
 		model->portamentoAmount = newValue;
 		for (auto& voice : voices)
 			voice->setPortamento(model->portamentoTime, model->portamentoAmount);
+	}
+	else if (parameterID == "filterDrive1") {
+		model->filterDrive1 = newValue;
+		for (auto& voice : voices)
+			voice->getFilter1()->setDrive(newValue);
+	}
+	else if (parameterID == "filterDrive2") {
+		model->filterDrive2 = newValue;
+		for (auto& voice : voices)
+			voice->getFilter2()->setDrive(newValue);
+	}
+	else if (parameterID == "masterDrive") {
+		model->masterDrive = newValue;
+		masterDriveAmount = juce::jlimit(0.0f, 1.0f, newValue);
+	}
+	else if (parameterID == "unisonVoices") {
+		model->unisonVoices = newValue;
+		unisonVoiceCount = juce::jlimit(1, 5, (int)std::round(newValue));
+	}
+	else if (parameterID == "unisonDetune") {
+		model->unisonDetune = newValue;
+		unisonDetuneCents = juce::jlimit(0.0f, 50.0f, newValue);
+	}
+	else if (parameterID == "unisonSpread") {
+		model->unisonSpread = newValue;
+		unisonStereoSpread = juce::jlimit(0.0f, 1.0f, newValue);
 	}
 	else if (parameterID == "filterMode") {
 		filterMode = newValue;

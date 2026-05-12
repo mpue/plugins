@@ -26,9 +26,13 @@ Voice::Voice(float sampleRate) {
     this->filterEnvelope = std::make_unique<SynthLab::ADSR>();
     this->modulator = 0;
     this->pitchBend = 1;
-    
+
     this->filter1 = std::make_shared<MultimodeFilter>();
     this->filter2 = std::make_shared<MultimodeFilter>();
+
+    // 5ms anti-click fade-in to suppress note-on transients (stays at 1.0 once ramped).
+    noteOnGate.reset(sampleRate, 0.005);
+    noteOnGate.setCurrentAndTargetValue(1.0f);
 
     ampEnvelope->setAttackRate(0 * sampleRate);
     ampEnvelope->setDecayRate(1 * sampleRate);
@@ -48,6 +52,10 @@ void Voice::setNoteAndVelocity(int note, int velocity) {
 
 	this->velocity = velocity;
 
+	// Restart the anti-click gate from 0 on every note-on.
+	noteOnGate.setCurrentAndTargetValue(0.0f);
+	noteOnGate.setTargetValue(1.0f);
+
 	float effectiveTime = portamentoTime * portamentoAmount;
 	if (effectiveTime > 0.0f && currentMidiNote >= 0.0f) {
 		// Portamento active: keep current position, just update target
@@ -56,10 +64,11 @@ void Voice::setNoteAndVelocity(int note, int velocity) {
 		// No portamento: jump immediately to the target note
 		currentMidiNote = (float)note;
 		targetMidiNote  = (float)note;
+		const float centScale = std::pow(2.0f, unisonOffsetCents / 1200.0f);
 		for (int i = 0; i < 4; i++) {
 			int index = note + oscillators[i]->getPitch();
 			if (index >= 0 && index < 128)
-				oscillators[i]->setFrequency((midiNote[index]) * pitchBend);
+				oscillators[i]->setFrequency((midiNote[index]) * pitchBend * centScale);
 		}
 	}
 
@@ -68,10 +77,11 @@ void Voice::setNoteAndVelocity(int note, int velocity) {
 
 void Voice::setPitchBend(float bend) {
     this->pitchBend = bend;
+	const float centScale = std::pow(2.0f, unisonOffsetCents / 1200.0f);
 	for (int i = 0; i < 4;i++) {
         int index = noteNumber + oscillators[i]->getPitch();
         if (index >= 0 && index < 128)
-            oscillators[i]->setFrequency((midiNote[index]) * pitchBend);
+            oscillators[i]->setFrequency((midiNote[index]) * pitchBend * centScale);
     }
 }
 
@@ -111,16 +121,23 @@ void Voice::processBlock(AudioBuffer<float>& buffer) {
             else
                 currentMidiNote += (diff > 0.0f ? 1.0f : -1.0f) * stepPerBuffer;
 
+            const float centScale = std::pow(2.0f, unisonOffsetCents / 1200.0f);
             for (int i = 0; i < (int)oscillators.size(); i++) {
                 float noteF = jlimit(0.0f, 127.0f, currentMidiNote + (float)oscillators[i]->getPitch());
                 float freq  = 440.0f * std::pow(2.0f, (noteF - 69.0f) / 12.0f);
-                oscillators[i]->setFrequency(freq * pitchBend);
+                oscillators[i]->setFrequency(freq * pitchBend * centScale);
             }
         }
     }
 
+    // Unison pan -> per-sample left/right gain multipliers (constant for the block).
+    // unisonPan in [-1..+1]: -1 = full left, +1 = full right, 0 = neutral.
+    const float unisonLeftGain  = std::sqrt(0.5f * (1.0f - unisonPan));
+    const float unisonRightGain = std::sqrt(0.5f * (1.0f + unisonPan));
+
     for (int sample = 0; sample < numSamples; ++sample) {
-        float amplitude    = (velocity / 127.0f) * ampEnvelope->process();
+        float gate         = noteOnGate.getNextValue();
+        float amplitude    = (velocity / 127.0f) * ampEnvelope->process() * gate;
         float filterEnvVal = filterEnvelope->process();
 
         // Per-sample filter1 modulation: envelope opens filter upward by up to 4 octaves
@@ -153,6 +170,10 @@ void Voice::processBlock(AudioBuffer<float>& buffer) {
             }
         }
 
+        // Unison pan: shift this voice across the stereo field (constant within block)
+        outL *= unisonLeftGain;
+        outR *= unisonRightGain;
+
         // Apply filters per sample
         if (filterRouting == FilterRouting::Serial) {
             filter1->processSampleStereo(outL, outR);
@@ -168,6 +189,14 @@ void Voice::processBlock(AudioBuffer<float>& buffer) {
         leftChannel[sample]  = outL;
         rightChannel[sample] = outR;
     }
+}
+
+void Voice::setUnisonOffset(float cents) {
+    unisonOffsetCents = cents;
+}
+
+void Voice::setUnisonPan(float pan) {
+    unisonPan = juce::jlimit(-1.0f, 1.0f, pan);
 }
 
 void Voice::setNoteNumber(int number) {
@@ -289,6 +318,10 @@ void Voice::processModulation()
 
 void Voice::setSampleRate(double rate) {
     this->sampleRate = rate;
+
+    // Re-tune the anti-click ramp to the new rate.
+    noteOnGate.reset(rate, 0.005);
+    noteOnGate.setCurrentAndTargetValue(1.0f);
 
     // Rate-dependent envelope parameters (times in samples)
     // User-set values (attack/decay/release/sustain) are applied via parameterChanged

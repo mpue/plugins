@@ -124,30 +124,50 @@ class BlitSquare: public Generator
   StkFloat lastPulseOutput_;  // For pulse width filtering
 };
 
+// PolyBLEP step correction. t is the phase position relative to a discontinuity
+// in [0, 1), dt is the phase increment per sample (freq / sampleRate).
+// Returns a correction value to add at a rising step, subtract at a falling step.
+// Reference: Välimäki & Huovilainen, "Antialiasing Oscillators in Subtractive
+// Synthesis" (IEEE 2007), polyBLEP variant.
+inline StkFloat blitSquarePolyBlep( StkFloat t, StkFloat dt )
+{
+  if (t < dt) {
+    t /= dt;
+    return t + t - t * t - (StkFloat)1.0;
+  }
+  if (t > (StkFloat)1.0 - dt) {
+    t = (t - (StkFloat)1.0) / dt;
+    return t * t + t + t + (StkFloat)1.0;
+  }
+  return (StkFloat)0.0;
+}
+
 inline StkFloat BlitSquare :: tick( void )
 {
-  // Simple pulse wave implementation with pulse width modulation
+  // Bandlimited square / pulse with PWM via polyBLEP correction.
+  // phase_ is stored in [0, TWO_PI); rate_ is radians/sample so
+  // dt = rate_ / TWO_PI = freq/sampleRate is the period fraction per sample.
   StkFloat normalizedPhase = phase_ / TWO_PI;
-  StkFloat output;
-  
-  // Generate the basic pulse wave
-  if (normalizedPhase < pulseWidth_) {
-    output = 1.0;
-  } else {
-    output = -1.0;
-  }
-  
-  // Apply a simple one-pole low-pass filter to reduce aliasing
-  // This helps make the pulse wave more band-limited
-  StkFloat alpha = 0.1f;  // Filter coefficient (higher = more filtering)
-  StkFloat filteredOutput = alpha * output + (1.0f - alpha) * lastPulseOutput_;
-  lastPulseOutput_ = filteredOutput;
+  StkFloat dt = rate_ / TWO_PI;
+  if (dt < (StkFloat)1.0e-6) dt = (StkFloat)1.0e-6;
 
-  // Apply DC blocker to remove any DC offset
-  lastFrame_[0] = filteredOutput - dcbState_ + 0.999f * lastFrame_[0];
-  dcbState_ = filteredOutput;
+  // Naive pulse with the requested duty cycle
+  StkFloat output = (normalizedPhase < pulseWidth_) ? (StkFloat)1.0 : (StkFloat)-1.0;
 
-  // Update phase
+  // Rising edge correction at phase = 0
+  output += blitSquarePolyBlep(normalizedPhase, dt);
+
+  // Falling edge correction at phase = pulseWidth_ (wrap into [0, 1))
+  StkFloat fallPhase = normalizedPhase - pulseWidth_;
+  if (fallPhase < (StkFloat)0.0) fallPhase += (StkFloat)1.0;
+  output -= blitSquarePolyBlep(fallPhase, dt);
+
+  // DC blocker — pulses with width != 0.5 carry DC; this also removes the
+  // small DC bias introduced by polyBLEP at extreme widths.
+  lastFrame_[0] = output - dcbState_ + (StkFloat)0.999 * lastFrame_[0];
+  dcbState_ = output;
+
+  // Advance phase
   phase_ += rate_;
   if ( phase_ >= TWO_PI ) phase_ -= TWO_PI;
 

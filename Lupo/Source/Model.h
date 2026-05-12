@@ -143,6 +143,18 @@ public:
 	float distDrive = 0.0f;
 	float distMix = 0.0f;
 
+	// Filter drive: pre-filter gain (dB) + tanh saturation, adds analog warmth
+	float filterDrive1 = 0.0f;
+	float filterDrive2 = 0.0f;
+
+	// Master soft-clip: 0 = off, 1 = strong glue saturation
+	float masterDrive = 0.0f;
+
+	// Voice unison: 1..5 voices per note, detuned in cents, panned across stereo
+	float unisonVoices = 1.0f;
+	float unisonDetune = 0.0f;   // cents (0..50)
+	float unisonSpread = 0.0f;   // 0..1 stereo width
+
 	float portamentoTime   = 1.0f;  // glide speed in seconds
 	float portamentoAmount = 0.0f;  // intensity 0=off, 1=full
 
