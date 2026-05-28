@@ -21,7 +21,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-ALL_PLUGINS=(AF-1 BC-1 CH-1 CP-1 DL-1 EQ8 LT-1 Lupo PS-1 RV-1 ST-1 SW-1 TS-1)
+ALL_PLUGINS=(AF-1 BC-1 BS-1 CD-1 CH-1 CP-1 CRV-1 DL-1 EQ8 FP-1 GS-1 HH-1 KM-1 LT-1 Lupo PM-1 PS-1 RV-1 SA-1 SN-1 ST-1 SW-1 TR-1 TS-1)
 ALL_FORMATS=(AU VST3)
 
 # ── Args ─────────────────────────────────────────────────────────────────────

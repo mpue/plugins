@@ -1021,8 +1021,6 @@ void LupoSynth::parameterChanged(const String& parameterID, float newValue)
 	else if (parameterID == "lfo1Amount") {
 		lfo1->setModAmount(newValue);
 	}
-	else if (parameterID == "fmAmount") {
-	}
 	else if (parameterID == "lfo1Shape") {
 		lfo1->setMode(newValue);
 	}

@@ -176,9 +176,11 @@ ArpPanel::ArpPanel (AttachmentFactory* factory, Arpeggiator* arp )
 
 
     //[Constructor] You can add your own custom stuff here..
-	modeCombo.get()->setSelectedItemIndex(0);
-	octaveCombo.get()->setSelectedItemIndex(0);
-	clockModeCombo.get()->setSelectedItemIndex(0);  // Default: Internal
+	// Use dontSendNotification so initial UI defaults don't fire change callbacks
+	// that would clobber the saved APVTS values when the editor is reopened.
+	modeCombo.get()->setSelectedItemIndex(0, juce::dontSendNotification);
+	octaveCombo.get()->setSelectedItemIndex(0, juce::dontSendNotification);
+	clockModeCombo.get()->setSelectedItemIndex(0, juce::dontSendNotification);  // Default: Internal
 	speedSlider.get()->setValue(2, juce::NotificationType::dontSendNotification);  // Default: 1/16
 	tempoSlider.get()->setValue(120.0f, juce::NotificationType::dontSendNotification);  // Default: 120 BPM
     //[/Constructor]
@@ -383,15 +385,70 @@ void ArpPanel::initAttachments()
 	if (factory == nullptr) {
 		return; // Safety check to prevent crash if factory is not initialized
 	}
-	
+
     // TODO :: plugin crashes, when trying to init attachments here, WTF?
-    
+
 	//factory->createSliderAttachment("arpSpeed", speedSlider.get());
 	//factory->createSliderAttachment("arpTempo", tempoSlider.get());
 	//factory->createComboAttachment("arpMode", modeCombo.get());
     //factory->createComboAttachment("arpClockMode", clockModeCombo.get());
 	//factory->createComboAttachment("arpOctaves", octaveCombo.get());
 	//factory->createButtonAttachment("arpEnabled", enabledButton.get());
+
+	// Sync UI and arp from the persisted APVTS values so reopening the editor
+	// restores the user's settings instead of falling back to constructor defaults.
+	auto* apvts = factory->getValueTreeState();
+	if (apvts == nullptr)
+		return;
+
+	auto readParam = [apvts](const juce::String& id, float fallback) {
+		if (auto* v = apvts->getRawParameterValue(id))
+			return v->load();
+		return fallback;
+	};
+
+	const bool  enabled   = readParam("arpEnabled", 0.0f) > 0.5f;
+	const bool  latch     = readParam("arpLatch",   0.0f) > 0.5f;
+	const int   modeIdx   = juce::jlimit(0, 3, (int)std::round(readParam("arpMode",   0.0f)));
+	const int   octaveIdx = juce::jlimit(0, 3, (int)std::round(readParam("arpOctaves",0.0f)));
+	const int   clockIdx  = juce::jlimit(0, 1, (int)std::round(readParam("arpClockMode",0.0f)));
+	const int   speedIdx  = juce::jlimit(0, 3, (int)std::round(readParam("arpSpeed",  2.0f)));
+	const float tempo     = readParam("arpTempo", 120.0f);
+	const float gatePct   = readParam("arpGate",   80.0f);
+
+	enabledButton->setToggleState(enabled, juce::dontSendNotification);
+	latchButton  ->setToggleState(latch,   juce::dontSendNotification);
+	modeCombo    ->setSelectedItemIndex(modeIdx,   juce::dontSendNotification);
+	octaveCombo  ->setSelectedItemIndex(octaveIdx, juce::dontSendNotification);
+	clockModeCombo->setSelectedItemIndex(clockIdx, juce::dontSendNotification);
+	speedSlider  ->setValue(speedIdx, juce::dontSendNotification);
+	tempoSlider  ->setValue(tempo,    juce::dontSendNotification);
+	gateSlider   ->setValue(gatePct,  juce::dontSendNotification);
+
+	// MIDI clock mode disables the internal tempo slider
+	const bool internalClock = (clockIdx == 0);
+	tempoSlider->setEnabled(internalClock);
+	tempoLabel ->setEnabled(internalClock);
+
+	// Push the same values into the actual arp so engine state matches the UI.
+	if (arp != nullptr)
+	{
+		arp->setEnabled(enabled);
+		arp->setLatch(latch);
+		arp->setOctaves(octaveIdx + 1);
+		arp->setDivisionIndex(speedIdx);
+		arp->setTempo(tempo);
+		arp->setGateTime(gatePct / 100.0f);
+		arp->setClockMode(internalClock ? Arpeggiator::ClockMode::Internal
+		                                : Arpeggiator::ClockMode::Midi);
+		switch (modeIdx)
+		{
+			case 0: arp->setMode(Arpeggiator::Mode::Up);     break;
+			case 1: arp->setMode(Arpeggiator::Mode::Down);   break;
+			case 2: arp->setMode(Arpeggiator::Mode::Random); break;
+			case 3: arp->setMode(Arpeggiator::Mode::Chord);  break;
+		}
+	}
 }
 //[/MiscUserCode]
 

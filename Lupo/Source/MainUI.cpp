@@ -238,15 +238,6 @@ MainUI::MainUI(LupoAudioProcessor* processor, AttachmentFactory* factory)
 	nextPresetButton->addListener(this);
 	nextPresetButton->setBounds(312, 16, 24, 24);
 
-	fmSlider.reset(new Slider("fmSlider"));
-	addAndMakeVisible(fmSlider.get());
-	fmSlider->setRange(0, 1, 0);
-	fmSlider->setSliderStyle(Slider::RotaryVerticalDrag);
-	fmSlider->setTextBoxStyle(Slider::NoTextBox, false, 80, 20);
-	fmSlider->addListener(this);
-
-	fmSlider->setBounds(496, 464, 64, 56);
-
 	distGroup.reset(new GroupComponent("distGroup",TRANS("Distortion")));
 	fxContainerPanel->addAndMakeVisible(distGroup.get());
 	distGroup->setVisible(true);
@@ -382,7 +373,6 @@ MainUI::MainUI(LupoAudioProcessor* processor, AttachmentFactory* factory)
 	// replace the entire state tree with an empty one, destroying all 
 	// parameter values and causing a crash.
 
-	factory->createSliderAttachment("fmAmount", fmSlider.get());
 	factory->createSliderAttachment("mainVolume", mainVolume.get());
 	factory->createComboAttachment("filterMode", filterModeCombo.get());
 
@@ -566,7 +556,6 @@ MainUI::~MainUI()
 	nextPresetButton = nullptr;
 	saveButton = nullptr;
 	presetCombo = nullptr;
-	fmSlider = nullptr;
 	distGroup = nullptr;
 	distortionPanel = nullptr;
 	arpGroup = nullptr;
@@ -610,10 +599,6 @@ void MainUI::sliderValueChanged(Slider* sliderThatWasMoved)
 	if (sliderThatWasMoved == mainVolume.get())
 	{
 		model->mainVolume = sliderThatWasMoved->getValue();
-	}
-	else if (sliderThatWasMoved == fmSlider.get())
-	{
-		// TODO : remove or cobble together with fmAmount attachment
 	}
 
 	sendChangeMessage();

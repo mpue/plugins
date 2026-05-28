@@ -134,8 +134,6 @@ LupoAudioProcessor::LupoAudioProcessor()
 	factory->createParam("lfo2Amount", "Lfo2 amount", 0, 10.0, 0);
 	factory->createParam("lfo3Amount", "Lfo3 amount", 0, 10.0, 0);
 
-	factory->createParam("fmAmount", "FM amount", 0, 1.0, 0);
-
 	factory->createParam("distDrive", "Drive", 0, 5.0, 0);
 	factory->createParam("distMix", "Distortion Mix", 0, 1.0, 0);
 	factory->createParam("distMode", "Distortion MOde", 0, 3.0, 0);

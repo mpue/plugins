@@ -109,7 +109,6 @@ private:
     std::unique_ptr<TextButton> nextPresetButton;
     std::unique_ptr<TextButton> saveButton;
     std::unique_ptr<ComboBox> presetCombo;
-    std::unique_ptr<Slider> fmSlider;
     std::unique_ptr<GroupComponent> distGroup;
     std::unique_ptr<DistortionPanel> distortionPanel;
     std::unique_ptr<GroupComponent> arpGroup;
