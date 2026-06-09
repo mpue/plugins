@@ -8,6 +8,7 @@
 
 #include "ParameterLayout.h"
 #include "ParameterIDs.h"
+#include "ModMatrixDefs.h"
 
 namespace pike
 {
@@ -217,6 +218,93 @@ namespace pike
             layout.add (std::make_unique<APF> (
                 ID { pid::filtRelease, pid::version }, "Filter Release",
                 timeRange (0.001f, 12.0f, 0.3f), 0.3f, attrSeconds));
+        }
+
+        //======================================================================
+        // Aux envelope
+        {
+            auto attrSeconds = juce::AudioParameterFloatAttributes()
+                                   .withStringFromValueFunction (secondsText);
+
+            layout.add (std::make_unique<APF> (
+                ID { pid::auxAttack, pid::version }, "Aux Attack",
+                timeRange (0.001f, 10.0f, 0.05f), 0.005f, attrSeconds));
+            layout.add (std::make_unique<APF> (
+                ID { pid::auxDecay, pid::version }, "Aux Decay",
+                timeRange (0.001f, 10.0f, 0.2f), 0.2f, attrSeconds));
+            layout.add (std::make_unique<APF> (
+                ID { pid::auxSustain, pid::version }, "Aux Sustain",
+                Range (0.0f, 1.0f, 0.001f), 0.5f,
+                juce::AudioParameterFloatAttributes()
+                    .withStringFromValueFunction ([] (float v, int) { return juce::String (v * 100.0f, 0) + " %"; })));
+            layout.add (std::make_unique<APF> (
+                ID { pid::auxRelease, pid::version }, "Aux Release",
+                timeRange (0.001f, 12.0f, 0.3f), 0.3f, attrSeconds));
+        }
+
+        //======================================================================
+        // LFOs
+        {
+            const juce::StringArray shapes   { "Sine", "Triangle", "Saw", "Square", "S&H" };
+            const juce::StringArray divisions { "1/1", "1/2", "1/4", "1/8", "1/8T", "1/16", "1/32" };
+
+            for (int n = 0; n < 2; ++n)
+            {
+                const auto label = "LFO " + juce::String (n + 1) + " ";
+
+                layout.add (std::make_unique<juce::AudioParameterChoice> (
+                    ID { pid::lfoShape[n], pid::version }, label + "Shape", shapes, 0));
+
+                layout.add (std::make_unique<juce::AudioParameterBool> (
+                    ID { pid::lfoSync[n], pid::version }, label + "Sync", false));
+
+                Range rateRange (0.01f, 40.0f);
+                rateRange.setSkewForCentre (2.0f);
+                layout.add (std::make_unique<APF> (
+                    ID { pid::lfoRate[n], pid::version }, label + "Rate",
+                    rateRange, 1.0f,
+                    juce::AudioParameterFloatAttributes()
+                        .withLabel ("Hz")
+                        .withStringFromValueFunction ([] (float v, int) { return juce::String (v, 2) + " Hz"; })));
+
+                layout.add (std::make_unique<juce::AudioParameterChoice> (
+                    ID { pid::lfoDiv[n], pid::version }, label + "Division", divisions, 2));
+
+                layout.add (std::make_unique<juce::AudioParameterBool> (
+                    ID { pid::lfoKeySync[n], pid::version }, label + "Key Sync", true));
+
+                layout.add (std::make_unique<juce::AudioParameterBool> (
+                    ID { pid::lfoMono[n], pid::version }, label + "Mono", false));
+
+                layout.add (std::make_unique<APF> (
+                    ID { pid::lfoFade[n], pid::version }, label + "Fade In",
+                    timeRange (0.0f, 10.0f, 0.5f), 0.0f,
+                    juce::AudioParameterFloatAttributes().withStringFromValueFunction (secondsText)));
+            }
+        }
+
+        //======================================================================
+        // Modulation matrix
+        {
+            const auto sources = mod::sourceNames();
+            const auto dests   = mod::destNames();
+
+            for (int s = 0; s < mod::numSlots; ++s)
+            {
+                const auto label = "Mod " + juce::String (s + 1) + " ";
+
+                layout.add (std::make_unique<juce::AudioParameterChoice> (
+                    ID { pid::modSourceId (s), pid::version }, label + "Source", sources, 0));
+
+                layout.add (std::make_unique<juce::AudioParameterChoice> (
+                    ID { pid::modDestId (s), pid::version }, label + "Dest", dests, 0));
+
+                layout.add (std::make_unique<APF> (
+                    ID { pid::modDepthId (s), pid::version }, label + "Depth",
+                    Range (-1.0f, 1.0f, 0.001f), 0.0f,
+                    juce::AudioParameterFloatAttributes()
+                        .withStringFromValueFunction ([] (float v, int) { return juce::String (v * 100.0f, 0) + " %"; })));
+            }
         }
 
         return layout;

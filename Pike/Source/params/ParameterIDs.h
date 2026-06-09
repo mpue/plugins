@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include <JuceHeader.h>
+
 namespace pid
 {
     // Version hint for juce::ParameterID. Bump only on incompatible reshuffles.
@@ -61,4 +63,27 @@ namespace pid
     inline constexpr auto filtDecay   = "filtDecay";
     inline constexpr auto filtSustain = "filtSustain";
     inline constexpr auto filtRelease = "filtRelease";
+
+    //==============================================================================
+    // Aux envelope (ADSR) — the 3rd, freely-assignable envelope
+    inline constexpr auto auxAttack  = "auxAttack";
+    inline constexpr auto auxDecay   = "auxDecay";
+    inline constexpr auto auxSustain = "auxSustain";
+    inline constexpr auto auxRelease = "auxRelease";
+
+    //==============================================================================
+    // LFOs 1..2 (index 0..1)
+    inline constexpr const char* lfoShape[2]   = { "lfo1Shape",   "lfo2Shape"   }; // choice
+    inline constexpr const char* lfoSync[2]    = { "lfo1Sync",    "lfo2Sync"    }; // bool tempo-sync
+    inline constexpr const char* lfoRate[2]    = { "lfo1Rate",    "lfo2Rate"    }; // free Hz
+    inline constexpr const char* lfoDiv[2]     = { "lfo1Div",     "lfo2Div"     }; // sync division
+    inline constexpr const char* lfoKeySync[2] = { "lfo1KeySync", "lfo2KeySync" }; // retrigger
+    inline constexpr const char* lfoMono[2]    = { "lfo1Mono",    "lfo2Mono"    }; // mono vs poly
+    inline constexpr const char* lfoFade[2]    = { "lfo1Fade",    "lfo2Fade"    }; // fade-in seconds
+
+    //==============================================================================
+    // Modulation matrix (16 slots). IDs built deterministically per slot.
+    inline juce::String modSourceId (int slot) { return "mod" + juce::String (slot) + "Src"; }
+    inline juce::String modDestId    (int slot) { return "mod" + juce::String (slot) + "Dst"; }
+    inline juce::String modDepthId   (int slot) { return "mod" + juce::String (slot) + "Depth"; }
 }

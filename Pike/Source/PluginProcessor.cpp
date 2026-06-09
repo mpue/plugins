@@ -75,7 +75,84 @@ void PikeAudioProcessor::cacheParameterPointers()
     voiceParameters.filtSustain = apvts.getRawParameterValue (pid::filtSustain);
     voiceParameters.filtRelease = apvts.getRawParameterValue (pid::filtRelease);
 
+    voiceParameters.auxAttack  = apvts.getRawParameterValue (pid::auxAttack);
+    voiceParameters.auxDecay   = apvts.getRawParameterValue (pid::auxDecay);
+    voiceParameters.auxSustain = apvts.getRawParameterValue (pid::auxSustain);
+    voiceParameters.auxRelease = apvts.getRawParameterValue (pid::auxRelease);
+
+    for (int l = 0; l < pike::PikeVoice::numLfos; ++l)
+    {
+        auto& lp = voiceParameters.lfo[l];
+        lp.shape   = apvts.getRawParameterValue (pid::lfoShape[l]);
+        lp.keySync = apvts.getRawParameterValue (pid::lfoKeySync[l]);
+        lp.mono    = apvts.getRawParameterValue (pid::lfoMono[l]);
+        lp.fadeIn  = apvts.getRawParameterValue (pid::lfoFade[l]);
+        lp.inc       = &lfoIncShared[l];
+        lp.monoPhase = &lfoMonoPhaseShared[l];
+    }
+
+    voiceParameters.modWheel   = &modWheelShared;
+    voiceParameters.aftertouch = &aftertouchShared;
+
+    for (int s = 0; s < pike::mod::numSlots; ++s)
+    {
+        auto& slot = voiceParameters.matrix[s];
+        slot.source = apvts.getRawParameterValue (pid::modSourceId (s));
+        slot.dest   = apvts.getRawParameterValue (pid::modDestId (s));
+        slot.depth  = apvts.getRawParameterValue (pid::modDepthId (s));
+    }
+
     voiceParameters.wavetable = &wavetable;
+}
+
+void PikeAudioProcessor::updateModulationRuntime (const juce::MidiBuffer& midi, int numSamples)
+{
+    // Capture the latest mod-wheel (CC1), channel pressure and poly aftertouch.
+    for (const auto metadata : midi)
+    {
+        const auto m = metadata.getMessage();
+        if (m.isController() && m.getControllerNumber() == 1)
+            modWheelShared.store ((float) m.getControllerValue() / 127.0f);
+        else if (m.isChannelPressure())
+            aftertouchShared.store ((float) m.getChannelPressureValue() / 127.0f);
+        else if (m.isAftertouch())
+            aftertouchShared.store ((float) m.getAfterTouchValue() / 127.0f);
+    }
+
+    // Tempo for synced LFO rates.
+    double bpm = 120.0;
+    if (auto* ph = getPlayHead())
+        if (auto pos = ph->getPosition())
+            if (auto b = pos->getBpm())
+                bpm = *b;
+
+    // LFO sync divisions: cycles per beat for "1/1".."1/32".
+    static constexpr float divFactor[] = { 0.25f, 0.5f, 1.0f, 2.0f, 3.0f, 4.0f, 8.0f };
+
+    const double sr = getSampleRate() > 0.0 ? getSampleRate() : 44100.0;
+
+    for (int l = 0; l < pike::PikeVoice::numLfos; ++l)
+    {
+        const bool  sync = apvts.getRawParameterValue (pid::lfoSync[l])->load() > 0.5f;
+        double hz;
+        if (sync)
+        {
+            const int div = juce::jlimit (0, (int) std::size (divFactor) - 1,
+                                          (int) apvts.getRawParameterValue (pid::lfoDiv[l])->load());
+            hz = bpm / 60.0 * divFactor[div];
+        }
+        else
+        {
+            hz = apvts.getRawParameterValue (pid::lfoRate[l])->load();
+        }
+
+        const double inc = hz / sr;
+        lfoIncShared[l].store ((float) inc);
+        lfoMonoPhaseShared[l].store ((float) lfoMonoPhaseAccum[l]);
+
+        lfoMonoPhaseAccum[l] += inc * numSamples;
+        lfoMonoPhaseAccum[l] -= std::floor (lfoMonoPhaseAccum[l]);
+    }
 }
 
 PikeAudioProcessor::~PikeAudioProcessor()
@@ -198,6 +275,8 @@ void PikeAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     // Synth instrument: no audio input. Start from silence, then let the voices
     // render the active notes into the buffer.
     buffer.clear();
+
+    updateModulationRuntime (midiMessages, buffer.getNumSamples());
 
     synth.renderNextBlock (buffer, midiMessages, 0, buffer.getNumSamples());
 

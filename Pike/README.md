@@ -106,7 +106,7 @@ gewartet.
 | **2** | APVTS-Parameter-Layout + Voice/Synthesiser-Gerüst (1 Osc → Amp-Env → Ausgang), polyphon spielbar | ✅ |
 | **3** | Oszillator-Sektion vollständig (3 Osc, alle Wellenformen, PolyBLEP, Wavetable, Sync/FM/RingMod/Noise, Mixer) | ✅ |
 | **4** | Multimode-Filter + Filter-Env + Drive | ✅ |
-| **5** | LFOs + 3. Hüllkurve + Mod-Matrix | ☐ |
+| **5** | LFOs + 3. Hüllkurve + Mod-Matrix | ✅ |
 | **6** | FX-Kette (Distortion, Chorus, Delay, Reverb) | ☐ |
 | **7** | Arpeggiator + Voice-Modi (Mono/Legato/Unison/Glide) | ☐ |
 | **8** | GUI ausbauen, alle Parameter anbinden | ☐ |
@@ -212,3 +212,32 @@ Multimode-Filter, Filter-Hüllkurve und Pre-Filter-Drive, alles per Stimme.
 > Default: Filter LP, 12 dB, Cutoff 20 kHz (offen), Resonanz/Drive/Env 0 →
 > klanglich transparent, bestehendes Verhalten bleibt kompatibel.
 > Als Nächstes: LFOs, 3. Hüllkurve und Mod-Matrix (Phase 5).
+
+---
+
+## Phase 5 — Status
+
+Komplettes Modulationssystem. **108 Parameter** insgesamt.
+
+- **3. Hüllkurve (Aux)**: eigene ADSR, frei in der Mod-Matrix zuweisbar
+  (zusätzlich zu Amp- und Filter-Env).
+- **2 LFOs** ([Lfo.h](Source/dsp/Lfo.h)): Formen **Sine/Tri/Saw/Square/S&H**,
+  **Tempo-Sync** (1/1…1/32, inkl. Triolen) **oder freie Rate** (Hz),
+  **Key-Sync** (Retrigger), **Fade-In** und **Mono/Poly**.
+  - Mono = gemeinsame Phase über alle Stimmen (vom Processor getrieben, inkl.
+    deterministischem S&H per Hash); Poly = pro Stimme eigene Phase.
+- **Mod-Matrix**: **16 Slots**, je *Source → Destination + Tiefe* (bipolar),
+  **per Sample** ausgewertet.
+  - Sources: Env1-3, LFO1/2, Velocity, ModWheel (CC1), Aftertouch, Key-Track.
+  - Destinations: Osc1-3-Pitch, Pulsweite, Wavetable-Pos, FM-Amount,
+    Filter-Cutoff/Resonance, Osc1-3-Level, LFO1/2-Rate.
+- **Architektur**: Parameter werden pro Block in einfache Member gecacht (je ein
+  Atomic-Read); der Sample-Loop nutzt nur diese Caches → keine Atomic-Loads im
+  Audio-Pfad. MIDI-Sources (ModWheel/Aftertouch) und Tempo werden im Processor
+  erfasst und über Atomics an die Stimmen gereicht.
+- **Verifiziert**: Offline-LFO-Test (alle Formen ∈ [-1,1], Mono-S&H stimmt über
+  Stimmen überein), Build VST3/AU/Standalone, `auval` „AU VALIDATION SUCCEEDED"
+  (108 Parameter, Render- und MIDI-Test bestanden).
+
+> Default: alle Matrix-Slots auf *None*, LFOs nicht geroutet → Klang identisch zu
+> Phase 4. Als Nächstes: FX-Kette (Phase 6).

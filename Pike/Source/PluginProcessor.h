@@ -70,8 +70,18 @@ private:
     // Shared, read-only wavetable bank built in prepareToPlay.
     pike::Wavetable wavetable;
 
+    // Runtime modulation values the voices read (computed each block).
+    std::atomic<float> lfoIncShared[2]       { 0.0f, 0.0f };
+    std::atomic<float> lfoMonoPhaseShared[2] { 0.0f, 0.0f };
+    std::atomic<float> modWheelShared        { 0.0f };
+    std::atomic<float> aftertouchShared      { 0.0f };
+    double lfoMonoPhaseAccum[2] { 0.0, 0.0 };
+
     /** Caches the APVTS atomics the voices read each block. */
     void cacheParameterPointers();
+
+    /** Updates LFO rates/phases and captures MIDI mod sources for this block. */
+    void updateModulationRuntime (const juce::MidiBuffer& midi, int numSamples);
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PikeAudioProcessor)

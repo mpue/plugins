@@ -2,13 +2,15 @@
   ==============================================================================
 
     PikeVoice.h
-    One polyphonic voice. Phase 3 scope: three oscillators (PolyBLEP analogue
-    waveforms + mip-mapped wavetable) -> mixer (with ring mod + noise) -> amp
-    ADSR. Osc1 is the sync master and the FM carrier (Osc3 -> Osc1).
+    One polyphonic voice. Phase 5 scope adds the modulation system:
+      - 3 oscillators (PolyBLEP + wavetable) -> mixer (+ring mod + noise)
+        -> drive -> multimode filter -> amp VCA
+      - 3 ADSR envelopes (amp, filter, aux)
+      - 2 LFOs (poly or mono/shared, key-sync, fade-in)
+      - a 16-slot modulation matrix applied per sample
 
-    The voice reads its parameters straight from the APVTS atomics (realtime-safe
-    loads); block-rate updates set per-oscillator tuning/shape, the sample loop
-    runs the DSP.
+    Per-block: all parameters are cached into plain members (one atomic read each).
+    Per-sample: only cached values are used — no atomic loads in the inner loop.
 
   ==============================================================================
 */
@@ -21,6 +23,8 @@
 #include "../dsp/Wavetable.h"
 #include "../dsp/Noise.h"
 #include "../dsp/Filter.h"
+#include "../dsp/Lfo.h"
+#include "../params/ModMatrixDefs.h"
 
 namespace pike
 {
@@ -28,15 +32,27 @@ namespace pike
     {
     public:
         static constexpr int numOscillators = 3;
+        static constexpr int numLfos        = 2;
 
-        /** Atomic parameter pointers the voice reads each block. Owned by APVTS. */
+        /** Atomic parameter pointers the voice reads each block. Owned by APVTS
+            (user params) or by the processor (runtime LFO/MIDI values). */
         struct Parameters
         {
-            // Amp envelope
+            // Amp / Filter / Aux envelopes
             std::atomic<float>* ampAttack  = nullptr;
             std::atomic<float>* ampDecay   = nullptr;
             std::atomic<float>* ampSustain = nullptr;
             std::atomic<float>* ampRelease = nullptr;
+
+            std::atomic<float>* filtAttack  = nullptr;
+            std::atomic<float>* filtDecay   = nullptr;
+            std::atomic<float>* filtSustain = nullptr;
+            std::atomic<float>* filtRelease = nullptr;
+
+            std::atomic<float>* auxAttack  = nullptr;
+            std::atomic<float>* auxDecay   = nullptr;
+            std::atomic<float>* auxSustain = nullptr;
+            std::atomic<float>* auxRelease = nullptr;
 
             // Per oscillator
             struct Osc
@@ -66,11 +82,28 @@ namespace pike
             std::atomic<float>* filterDrive     = nullptr;
             std::atomic<float>* filterEnvAmount = nullptr;
 
-            // Filter envelope
-            std::atomic<float>* filtAttack  = nullptr;
-            std::atomic<float>* filtDecay   = nullptr;
-            std::atomic<float>* filtSustain = nullptr;
-            std::atomic<float>* filtRelease = nullptr;
+            // LFOs (user params + processor-computed runtime values)
+            struct LfoParams
+            {
+                std::atomic<float>* shape     = nullptr;
+                std::atomic<float>* keySync   = nullptr;
+                std::atomic<float>* mono      = nullptr;
+                std::atomic<float>* fadeIn    = nullptr;
+                std::atomic<float>* inc       = nullptr;   // cycles/sample (processor)
+                std::atomic<float>* monoPhase = nullptr;   // block-start phase (processor)
+            } lfo[numLfos];
+
+            // MIDI modulation sources (processor)
+            std::atomic<float>* modWheel   = nullptr;
+            std::atomic<float>* aftertouch = nullptr;
+
+            // Modulation matrix
+            struct Slot
+            {
+                std::atomic<float>* source = nullptr;
+                std::atomic<float>* dest   = nullptr;
+                std::atomic<float>* depth  = nullptr;
+            } matrix[mod::numSlots];
 
             // Shared, read-only wavetable bank (owned by the processor).
             const Wavetable* wavetable = nullptr;
@@ -94,49 +127,61 @@ namespace pike
 
             if (newRate > 0.0)
             {
-                for (auto& o : oscillators)
-                    o.setSampleRate (newRate);
+                for (auto& o : oscillators) o.setSampleRate (newRate);
+                for (auto& l : lfos)        l.setSampleRate (newRate);
 
                 ampEnvelope.setSampleRate (newRate);
                 filterEnvelope.setSampleRate (newRate);
+                auxEnvelope.setSampleRate (newRate);
                 filter.setSampleRate (newRate);
             }
         }
 
         //======================================================================
         void startNote (int midiNoteNumber, float velocity,
-                        juce::SynthesiserSound*, int /*currentPitchWheelPosition*/) override
+                        juce::SynthesiserSound*, int) override
         {
             level    = velocity;
             midiNote = midiNoteNumber;
             noteHz   = juce::MidiMessage::getMidiNoteInHertz (midiNoteNumber);
             lastOsc3 = 0.0f;
+            samplesSinceNoteOn = 0;
+            prevRateMod[0] = prevRateMod[1] = 0.0;
 
-            noise.seed ((uint32_t) (midiNoteNumber * 2654435761u) ^ 0x9e3779b9u);
+            voiceSeed = (uint32_t) (midiNoteNumber * 2654435761u) ^ 0x9e3779b9u;
+            noise.seed (voiceSeed);
 
             for (auto& o : oscillators)
                 o.resetPhase();
 
             filter.reset();
 
-            updateEnvelopeParameters();
-            updateOscillatorParameters();
-            updateFilterParameters();
+            for (int l = 0; l < numLfos; ++l)
+            {
+                const bool keySync = parameters.lfo[l].keySync != nullptr
+                                       && parameters.lfo[l].keySync->load() > 0.5f;
+                lfos[l].noteOn (keySync);
+            }
+
+            updateBlockParameters();
             ampEnvelope.noteOn();
             filterEnvelope.noteOn();
+            auxEnvelope.noteOn();
         }
 
-        void stopNote (float /*velocity*/, bool allowTailOff) override
+        void stopNote (float, bool allowTailOff) override
         {
             if (allowTailOff)
             {
                 ampEnvelope.noteOff();
                 filterEnvelope.noteOff();
+                auxEnvelope.noteOff();
             }
             else
             {
                 ampEnvelope.reset();
                 filterEnvelope.reset();
+                auxEnvelope.reset();
                 clearCurrentNote();
             }
         }
@@ -151,53 +196,130 @@ namespace pike
             if (! ampEnvelope.isActive())
                 return;
 
-            updateEnvelopeParameters();
-            updateOscillatorParameters();
-            updateFilterParameters();
+            updateBlockParameters();
 
             const int numChannels = outputBuffer.getNumChannels();
 
             for (int i = 0; i < numSamples; ++i)
             {
-                // Osc3 -> Osc1 FM (one-sample-delayed carrier feedback).
-                const float fmOffset = fmAmount * lastOsc3 * (float) osc1Hz * fmDepth;
+                // ----- envelopes -----
+                const float ampVal  = ampEnvelope.getNextSample();
+                const float filtVal = filterEnvelope.getNextSample();
+                const float auxVal  = auxEnvelope.getNextSample();
+
+                // ----- LFOs (rate modulated by previous sample's value) -----
+                float lfoVal[numLfos];
+                for (int l = 0; l < numLfos; ++l)
+                {
+                    const float fade = lfoFadeSamples[l] > 0.0f
+                                         ? juce::jlimit (0.0f, 1.0f, (float) samplesSinceNoteOn / lfoFadeSamples[l])
+                                         : 1.0f;
+
+                    if (lfoMono[l])
+                    {
+                        const double tp = lfoMonoPhase[l] + (double) i * lfoInc[l];
+                        lfoVal[l] = lfos[l].renderMono (tp, 0x51ed3000u + (uint32_t) l) * fade;
+                    }
+                    else
+                    {
+                        const double inc = lfoInc[l] * std::exp2 (prevRateMod[l]);
+                        lfoVal[l] = lfos[l].renderPoly (inc, voiceSeed + (uint32_t) l) * fade;
+                    }
+                }
+
+                // ----- modulation sources -----
+                float src[mod::numSources];
+                src[(int) mod::Source::None]       = 0.0f;
+                src[(int) mod::Source::Env1]       = ampVal;
+                src[(int) mod::Source::Env2]       = filtVal;
+                src[(int) mod::Source::Env3]       = auxVal;
+                src[(int) mod::Source::Lfo1]       = lfoVal[0];
+                src[(int) mod::Source::Lfo2]       = lfoVal[1];
+                src[(int) mod::Source::Velocity]   = level;
+                src[(int) mod::Source::ModWheel]   = modWheelVal;
+                src[(int) mod::Source::Aftertouch] = aftertouchVal;
+                src[(int) mod::Source::KeyTrack]   = keyTrackSource;
+
+                // ----- evaluate matrix -----
+                float dst[mod::numDests] = {};
+                for (int s = 0; s < mod::numSlots; ++s)
+                {
+                    const int   si = slotSource[s];
+                    const int   di = slotDest[s];
+                    const float dp = slotDepth[s];
+                    if (si > 0 && di > 0 && dp != 0.0f)
+                        dst[di] += src[si] * dp;
+                }
+
+                prevRateMod[0] = (double) (dst[(int) mod::Dest::Lfo1Rate] * mod::destScale[(int) mod::Dest::Lfo1Rate]);
+                prevRateMod[1] = (double) (dst[(int) mod::Dest::Lfo2Rate] * mod::destScale[(int) mod::Dest::Lfo2Rate]);
+
+                // ----- apply per-oscillator modulation -----
+                const float pwMod = dst[(int) mod::Dest::PulseWidth]   * mod::destScale[(int) mod::Dest::PulseWidth];
+                const float wtMod = dst[(int) mod::Dest::WavetablePos] * mod::destScale[(int) mod::Dest::WavetablePos];
+
+                double o1FreqModded = baseFreqHz[0];
+                for (int n = 0; n < numOscillators; ++n)
+                {
+                    const int   pitchDest = (int) mod::Dest::Osc1Pitch + n;
+                    const float semis     = dst[pitchDest] * mod::destScale[pitchDest];
+                    const double f        = baseFreqHz[n] * std::exp2 ((double) semis / 12.0);
+
+                    oscillators[n].setFrequency ((float) f);
+                    oscillators[n].setPulseWidth       (juce::jlimit (0.02f, 0.98f, basePulseWidth[n] + pwMod));
+                    oscillators[n].setWavetablePosition (juce::jlimit (0.0f, 1.0f, baseWavetablePos[n] + wtMod));
+
+                    if (n == 0)
+                        o1FreqModded = f;
+                }
+
+                // ----- oscillators with FM + sync -----
+                const float fm       = fmBase + dst[(int) mod::Dest::FmAmount] * mod::destScale[(int) mod::Dest::FmAmount];
+                const float fmOffset = fm * lastOsc3 * (float) o1FreqModded * fmDepth;
 
                 const float o1 = oscillators[0].processSample (fmOffset);
-
-                // Hard sync: when the master (osc1) wraps, restart enabled slaves.
                 if (oscillators[0].didWrap())
                 {
                     if (sync2) oscillators[1].hardSync();
                     if (sync3) oscillators[2].hardSync();
                 }
-
                 const float o2 = oscillators[1].processSample();
                 const float o3 = oscillators[2].processSample();
                 lastOsc3 = o3;
 
-                float mix = o1 * oscLevel[0]
-                          + o2 * oscLevel[1]
-                          + o3 * oscLevel[2]
+                // ----- mixer (with per-osc level modulation) -----
+                const float l0 = juce::jmax (0.0f, oscLevel[0] + dst[(int) mod::Dest::Osc1Level]);
+                const float l1 = juce::jmax (0.0f, oscLevel[1] + dst[(int) mod::Dest::Osc2Level]);
+                const float l2 = juce::jmax (0.0f, oscLevel[2] + dst[(int) mod::Dest::Osc3Level]);
+
+                float mix = o1 * l0 + o2 * l1 + o3 * l2
                           + ringModLevel * (o1 * o2)
                           + noiseLevel * noise.processSample();
 
-                // Pre-filter drive (clean at 0, soft overdrive as it opens up).
+                // ----- drive -----
                 if (drive > 0.0001f)
                     mix += drive * (std::tanh (mix * drivePreGain) - mix);
 
-                // Filter envelope modulates cutoff (in octaves), plus key-track.
-                const float fenv   = filterEnvelope.getNextSample();
-                const double octs  = keyTrackOctaves + (double) (filterEnvAmount * fenv) * filterEnvRangeOct;
-                const float cutoff = (float) (baseCutoff * std::exp2 (octs));
-                filter.setCutoff (cutoff);
+                // ----- filter (cutoff & resonance modulation) -----
+                if (resonanceModActive)
+                {
+                    const float resMod = dst[(int) mod::Dest::Resonance] * mod::destScale[(int) mod::Dest::Resonance];
+                    filter.setResonance (juce::jlimit (0.0f, 1.0f, baseResonance + resMod));
+                }
+
+                const double cutoffOct = keyTrackOctaves
+                                       + (double) (filterEnvAmount * filtVal) * filterEnvRangeOct
+                                       + (double) (dst[(int) mod::Dest::Cutoff] * mod::destScale[(int) mod::Dest::Cutoff]);
+                filter.setCutoff ((float) (baseCutoff * std::exp2 (cutoffOct)));
 
                 const float filtered = filter.process (mix);
 
-                const float env    = ampEnvelope.getNextSample();
-                const float sample = filtered * env * level;
-
+                // ----- amp VCA -----
+                const float sample = filtered * ampVal * level;
                 for (int ch = 0; ch < numChannels; ++ch)
                     outputBuffer.addSample (ch, startSample + i, sample);
+
+                ++samplesSinceNoteOn;
 
                 if (! ampEnvelope.isActive())
                 {
@@ -208,97 +330,140 @@ namespace pike
         }
 
     private:
-        void updateEnvelopeParameters() noexcept
+        void updateBlockParameters() noexcept
         {
-            juce::ADSR::Parameters p;
-            p.attack  = parameters.ampAttack  != nullptr ? parameters.ampAttack ->load() : 0.005f;
-            p.decay   = parameters.ampDecay   != nullptr ? parameters.ampDecay  ->load() : 0.15f;
-            p.sustain = parameters.ampSustain != nullptr ? parameters.ampSustain->load() : 0.8f;
-            p.release = parameters.ampRelease != nullptr ? parameters.ampRelease->load() : 0.2f;
-            ampEnvelope.setParameters (p);
-        }
+            // ----- envelopes -----
+            ampEnvelope.setParameters (readADSR (parameters.ampAttack, parameters.ampDecay,
+                                                 parameters.ampSustain, parameters.ampRelease, 0.005f, 0.15f, 0.8f, 0.2f));
+            filterEnvelope.setParameters (readADSR (parameters.filtAttack, parameters.filtDecay,
+                                                    parameters.filtSustain, parameters.filtRelease, 0.005f, 0.2f, 0.6f, 0.3f));
+            auxEnvelope.setParameters (readADSR (parameters.auxAttack, parameters.auxDecay,
+                                                 parameters.auxSustain, parameters.auxRelease, 0.005f, 0.2f, 0.5f, 0.3f));
 
-        void updateOscillatorParameters() noexcept
-        {
+            // ----- oscillators -----
             for (int n = 0; n < numOscillators; ++n)
             {
                 const auto& P = parameters.osc[n];
 
-                const int waveIndex = P.wave != nullptr ? (int) P.wave->load() : 0;
-                oscillators[n].setWaveform (static_cast<Waveform> (waveIndex));
+                oscillators[n].setWaveform (static_cast<Waveform> (P.wave != nullptr ? (int) P.wave->load() : 0));
 
                 const double octave = P.octave != nullptr ? P.octave->load() : 0.0;
                 const double semi   = P.semi   != nullptr ? P.semi->load()   : 0.0;
                 const double fine   = P.fine   != nullptr ? P.fine->load()   : 0.0;
-                const double mult   = std::pow (2.0, octave + semi / 12.0 + fine / 1200.0);
-                const double freq   = noteHz * mult;
-
-                oscillators[n].setFrequency ((float) freq);
-                oscillators[n].setPulseWidth       (P.pulseWidth != nullptr ? P.pulseWidth->load() : 0.5f);
-                oscillators[n].setWavetablePosition (P.wtPos     != nullptr ? P.wtPos->load()      : 0.0f);
-
-                oscLevel[n] = P.level != nullptr ? P.level->load() : 0.0f;
-
-                if (n == 0)
-                    osc1Hz = freq;
+                baseFreqHz[n]      = noteHz * std::pow (2.0, octave + semi / 12.0 + fine / 1200.0);
+                basePulseWidth[n]  = P.pulseWidth != nullptr ? P.pulseWidth->load() : 0.5f;
+                baseWavetablePos[n]= P.wtPos      != nullptr ? P.wtPos->load()      : 0.0f;
+                oscLevel[n]        = P.level      != nullptr ? P.level->load()      : 0.0f;
             }
 
-            sync2        = parameters.osc2Sync     != nullptr && parameters.osc2Sync->load() > 0.5f;
-            sync3        = parameters.osc3Sync     != nullptr && parameters.osc3Sync->load() > 0.5f;
-            fmAmount     = parameters.fmAmount     != nullptr ? parameters.fmAmount->load()     : 0.0f;
-            ringModLevel = parameters.ringModLevel != nullptr ? parameters.ringModLevel->load() : 0.0f;
-            noiseLevel   = parameters.noiseLevel   != nullptr ? parameters.noiseLevel->load()   : 0.0f;
-        }
+            sync2        = loadBool (parameters.osc2Sync);
+            sync3        = loadBool (parameters.osc3Sync);
+            fmBase       = loadFloat (parameters.fmAmount);
+            ringModLevel = loadFloat (parameters.ringModLevel);
+            noiseLevel   = loadFloat (parameters.noiseLevel);
 
-        void updateFilterParameters() noexcept
-        {
-            const int typeIndex = parameters.filterType != nullptr ? (int) parameters.filterType->load() : 0;
-            filter.setType (static_cast<FilterType> (typeIndex));
-            filter.setSlope24 (parameters.filterSlope != nullptr && parameters.filterSlope->load() > 0.5f);
-            filter.setResonance (parameters.filterResonance != nullptr ? parameters.filterResonance->load() : 0.0f);
+            // ----- filter -----
+            filter.setType (static_cast<FilterType> (parameters.filterType != nullptr ? (int) parameters.filterType->load() : 0));
+            filter.setSlope24 (loadBool (parameters.filterSlope));
+            baseResonance = loadFloat (parameters.filterResonance);
+            filter.setResonance (baseResonance);
 
-            baseCutoff      = parameters.filterCutoff    != nullptr ? parameters.filterCutoff->load()    : 20000.0f;
-            drive           = parameters.filterDrive     != nullptr ? parameters.filterDrive->load()     : 0.0f;
-            filterEnvAmount = parameters.filterEnvAmount != nullptr ? parameters.filterEnvAmount->load() : 0.0f;
+            baseCutoff      = parameters.filterCutoff != nullptr ? parameters.filterCutoff->load() : 20000.0f;
+            drive           = loadFloat (parameters.filterDrive);
             drivePreGain    = 1.0f + drive * 15.0f;
+            filterEnvAmount = loadFloat (parameters.filterEnvAmount);
 
-            const float keyTrack = parameters.filterKeyTrack != nullptr ? parameters.filterKeyTrack->load() : 0.0f;
+            const float keyTrack = loadFloat (parameters.filterKeyTrack);
             keyTrackOctaves = keyTrack * (double) (midiNote - 60) / 12.0;
 
-            juce::ADSR::Parameters p;
-            p.attack  = parameters.filtAttack  != nullptr ? parameters.filtAttack ->load() : 0.005f;
-            p.decay   = parameters.filtDecay   != nullptr ? parameters.filtDecay  ->load() : 0.2f;
-            p.sustain = parameters.filtSustain != nullptr ? parameters.filtSustain->load() : 0.6f;
-            p.release = parameters.filtRelease != nullptr ? parameters.filtRelease->load() : 0.3f;
-            filterEnvelope.setParameters (p);
+            // ----- LFOs -----
+            for (int l = 0; l < numLfos; ++l)
+            {
+                lfos[l].setShape (static_cast<LfoShape> (parameters.lfo[l].shape != nullptr ? (int) parameters.lfo[l].shape->load() : 0));
+                lfoMono[l]        = loadBool (parameters.lfo[l].mono);
+                lfoFadeSamples[l] = loadFloat (parameters.lfo[l].fadeIn) * (float) getSampleRate();
+                lfoInc[l]         = parameters.lfo[l].inc       != nullptr ? parameters.lfo[l].inc->load()       : 0.0;
+                lfoMonoPhase[l]   = parameters.lfo[l].monoPhase != nullptr ? parameters.lfo[l].monoPhase->load() : 0.0;
+            }
+
+            // ----- MIDI sources -----
+            modWheelVal    = loadFloat (parameters.modWheel);
+            aftertouchVal  = loadFloat (parameters.aftertouch);
+            keyTrackSource = juce::jlimit (-1.0f, 1.0f, (float) (midiNote - 60) / 60.0f);
+
+            // ----- matrix -----
+            resonanceModActive = false;
+            for (int s = 0; s < mod::numSlots; ++s)
+            {
+                slotSource[s] = parameters.matrix[s].source != nullptr ? (int) parameters.matrix[s].source->load() : 0;
+                slotDest[s]   = parameters.matrix[s].dest   != nullptr ? (int) parameters.matrix[s].dest->load()   : 0;
+                slotDepth[s]  = parameters.matrix[s].depth  != nullptr ? parameters.matrix[s].depth->load()        : 0.0f;
+
+                if (slotSource[s] > 0 && slotDepth[s] != 0.0f && slotDest[s] == (int) mod::Dest::Resonance)
+                    resonanceModActive = true;
+            }
         }
 
-        static constexpr float  fmDepth            = 4.0f;   // maps fmAmount 0..1 to a musical index
-        static constexpr double filterEnvRangeOct  = 6.0;    // filter env full-scale range (octaves)
+        static float loadFloat (std::atomic<float>* p) noexcept { return p != nullptr ? p->load() : 0.0f; }
+        static bool  loadBool  (std::atomic<float>* p) noexcept { return p != nullptr && p->load() > 0.5f; }
+
+        static juce::ADSR::Parameters readADSR (std::atomic<float>* a, std::atomic<float>* d,
+                                                std::atomic<float>* s, std::atomic<float>* r,
+                                                float da, float dd, float ds, float dr) noexcept
+        {
+            juce::ADSR::Parameters p;
+            p.attack  = a != nullptr ? a->load() : da;
+            p.decay   = d != nullptr ? d->load() : dd;
+            p.sustain = s != nullptr ? s->load() : ds;
+            p.release = r != nullptr ? r->load() : dr;
+            return p;
+        }
+
+        static constexpr float  fmDepth           = 4.0f;
+        static constexpr double filterEnvRangeOct = 6.0;
 
         Parameters parameters;
         Oscillator oscillators[numOscillators];
+        Lfo        lfos[numLfos];
         Noise      noise;
-        juce::ADSR ampEnvelope;
-        juce::ADSR filterEnvelope;
+        juce::ADSR ampEnvelope, filterEnvelope, auxEnvelope;
         StateVariableFilter filter;
 
-        int    midiNote = 60;
-        double noteHz   = 440.0;
-        double osc1Hz   = 440.0;
-        float  level    = 0.0f;   // velocity-scaled amplitude
-        float  lastOsc3 = 0.0f;   // FM carrier feedback
+        int      midiNote = 60;
+        double   noteHz   = 440.0;
+        float    level    = 0.0f;
+        float    lastOsc3 = 0.0f;
+        uint32_t voiceSeed = 0x9e3779b9u;
+        int      samplesSinceNoteOn = 0;
+        double   prevRateMod[numLfos] { 0.0, 0.0 };
 
-        // Cached per-block routing/mixer state.
-        float oscLevel[numOscillators] { 0.0f, 0.0f, 0.0f };
-        bool  sync2 = false, sync3 = false;
-        float fmAmount = 0.0f, ringModLevel = 0.0f, noiseLevel = 0.0f;
+        // Cached per-block oscillator / mixer state.
+        double baseFreqHz[numOscillators]       { 440.0, 440.0, 440.0 };
+        float  basePulseWidth[numOscillators]   { 0.5f, 0.5f, 0.5f };
+        float  baseWavetablePos[numOscillators] { 0.0f, 0.0f, 0.0f };
+        float  oscLevel[numOscillators]         { 0.0f, 0.0f, 0.0f };
+        bool   sync2 = false, sync3 = false;
+        float  fmBase = 0.0f, ringModLevel = 0.0f, noiseLevel = 0.0f;
 
         // Cached per-block filter state.
         double baseCutoff      = 20000.0;
         double keyTrackOctaves = 0.0;
+        float  baseResonance   = 0.0f;
         float  drive           = 0.0f;
         float  drivePreGain    = 1.0f;
         float  filterEnvAmount = 0.0f;
+        bool   resonanceModActive = false;
+
+        // Cached per-block LFO state.
+        bool   lfoMono[numLfos]        { false, false };
+        float  lfoFadeSamples[numLfos] { 0.0f, 0.0f };
+        double lfoInc[numLfos]         { 0.0, 0.0 };
+        double lfoMonoPhase[numLfos]   { 0.0, 0.0 };
+
+        // Cached per-block MIDI/matrix state.
+        float modWheelVal = 0.0f, aftertouchVal = 0.0f, keyTrackSource = 0.0f;
+        int   slotSource[mod::numSlots] {};
+        int   slotDest[mod::numSlots]   {};
+        float slotDepth[mod::numSlots]  {};
     };
 }

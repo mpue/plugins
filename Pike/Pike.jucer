@@ -26,6 +26,8 @@
               file="Source/params/ParameterLayout.h"/>
         <FILE id="pkPlyC1" name="ParameterLayout.cpp" compile="1" resource="0"
               file="Source/params/ParameterLayout.cpp"/>
+        <FILE id="pkMmd01" name="ModMatrixDefs.h" compile="0" resource="0"
+              file="Source/params/ModMatrixDefs.h"/>
       </GROUP>
       <GROUP id="pkDsp1" name="dsp">
         <FILE id="pkOsc01" name="Oscillator.h" compile="0" resource="0"
@@ -36,6 +38,8 @@
               file="Source/dsp/Noise.h"/>
         <FILE id="pkFlt01" name="Filter.h" compile="0" resource="0"
               file="Source/dsp/Filter.h"/>
+        <FILE id="pkLfo01" name="Lfo.h" compile="0" resource="0"
+              file="Source/dsp/Lfo.h"/>
       </GROUP>
       <GROUP id="pkSynth1" name="synth">
         <FILE id="pkSnd01" name="PikeSound.h" compile="0" resource="0"
