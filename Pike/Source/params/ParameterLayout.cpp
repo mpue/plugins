@@ -307,6 +307,102 @@ namespace pike
             }
         }
 
+        //======================================================================
+        // FX chain
+        {
+            auto pctText = [] (float v, int) { return juce::String (v * 100.0f, 0) + " %"; };
+
+            // Distortion
+            layout.add (std::make_unique<juce::AudioParameterBool> (
+                ID { pid::distOn, pid::version }, "Distortion On", false));
+            layout.add (std::make_unique<juce::AudioParameterChoice> (
+                ID { pid::distType, pid::version }, "Distortion Type",
+                juce::StringArray { "Soft", "Hard", "Fold" }, 0));
+            layout.add (std::make_unique<APF> (
+                ID { pid::distDrive, pid::version }, "Distortion Drive",
+                Range (0.0f, 1.0f, 0.001f), 0.3f,
+                juce::AudioParameterFloatAttributes().withStringFromValueFunction (pctText)));
+            layout.add (std::make_unique<APF> (
+                ID { pid::distMix, pid::version }, "Distortion Mix",
+                Range (0.0f, 1.0f, 0.001f), 1.0f,
+                juce::AudioParameterFloatAttributes().withStringFromValueFunction (pctText)));
+
+            // Chorus
+            layout.add (std::make_unique<juce::AudioParameterBool> (
+                ID { pid::chorusOn, pid::version }, "Chorus On", false));
+            {
+                Range chorusRateRange (0.05f, 10.0f);
+                chorusRateRange.setSkewForCentre (1.0f);
+                layout.add (std::make_unique<APF> (
+                    ID { pid::chorusRate, pid::version }, "Chorus Rate",
+                    chorusRateRange, 1.0f,
+                    juce::AudioParameterFloatAttributes()
+                        .withLabel ("Hz")
+                        .withStringFromValueFunction ([] (float v, int) { return juce::String (v, 2) + " Hz"; })));
+            }
+            layout.add (std::make_unique<APF> (
+                ID { pid::chorusDepth, pid::version }, "Chorus Depth",
+                Range (0.0f, 1.0f, 0.001f), 0.25f,
+                juce::AudioParameterFloatAttributes().withStringFromValueFunction (pctText)));
+            layout.add (std::make_unique<APF> (
+                ID { pid::chorusFeedback, pid::version }, "Chorus Feedback",
+                Range (-0.95f, 0.95f, 0.001f), 0.0f,
+                juce::AudioParameterFloatAttributes().withStringFromValueFunction (pctText)));
+            layout.add (std::make_unique<APF> (
+                ID { pid::chorusMix, pid::version }, "Chorus Mix",
+                Range (0.0f, 1.0f, 0.001f), 0.5f,
+                juce::AudioParameterFloatAttributes().withStringFromValueFunction (pctText)));
+
+            // Delay
+            layout.add (std::make_unique<juce::AudioParameterBool> (
+                ID { pid::delayOn, pid::version }, "Delay On", false));
+            layout.add (std::make_unique<juce::AudioParameterBool> (
+                ID { pid::delaySync, pid::version }, "Delay Sync", true));
+            {
+                Range delayTimeRange (1.0f, 2000.0f);
+                delayTimeRange.setSkewForCentre (300.0f);
+                layout.add (std::make_unique<APF> (
+                    ID { pid::delayTime, pid::version }, "Delay Time",
+                    delayTimeRange, 300.0f,
+                    juce::AudioParameterFloatAttributes()
+                        .withLabel ("ms")
+                        .withStringFromValueFunction ([] (float v, int) { return juce::String (v, 0) + " ms"; })));
+            }
+            layout.add (std::make_unique<juce::AudioParameterChoice> (
+                ID { pid::delayDiv, pid::version }, "Delay Division",
+                juce::StringArray { "1/1", "1/2", "1/4", "1/8", "1/8T", "1/16", "1/32" }, 2));
+            layout.add (std::make_unique<APF> (
+                ID { pid::delayFeedback, pid::version }, "Delay Feedback",
+                Range (0.0f, 0.98f, 0.001f), 0.4f,
+                juce::AudioParameterFloatAttributes().withStringFromValueFunction (pctText)));
+            layout.add (std::make_unique<APF> (
+                ID { pid::delayMix, pid::version }, "Delay Mix",
+                Range (0.0f, 1.0f, 0.001f), 0.3f,
+                juce::AudioParameterFloatAttributes().withStringFromValueFunction (pctText)));
+            layout.add (std::make_unique<juce::AudioParameterBool> (
+                ID { pid::delayPingpong, pid::version }, "Delay Ping-Pong", false));
+
+            // Reverb
+            layout.add (std::make_unique<juce::AudioParameterBool> (
+                ID { pid::reverbOn, pid::version }, "Reverb On", false));
+            layout.add (std::make_unique<APF> (
+                ID { pid::reverbSize, pid::version }, "Reverb Size",
+                Range (0.0f, 1.0f, 0.001f), 0.5f,
+                juce::AudioParameterFloatAttributes().withStringFromValueFunction (pctText)));
+            layout.add (std::make_unique<APF> (
+                ID { pid::reverbDamping, pid::version }, "Reverb Damping",
+                Range (0.0f, 1.0f, 0.001f), 0.5f,
+                juce::AudioParameterFloatAttributes().withStringFromValueFunction (pctText)));
+            layout.add (std::make_unique<APF> (
+                ID { pid::reverbWidth, pid::version }, "Reverb Width",
+                Range (0.0f, 1.0f, 0.001f), 1.0f,
+                juce::AudioParameterFloatAttributes().withStringFromValueFunction (pctText)));
+            layout.add (std::make_unique<APF> (
+                ID { pid::reverbMix, pid::version }, "Reverb Mix",
+                Range (0.0f, 1.0f, 0.001f), 0.3f,
+                juce::AudioParameterFloatAttributes().withStringFromValueFunction (pctText)));
+        }
+
         return layout;
     }
 }

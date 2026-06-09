@@ -86,4 +86,31 @@ namespace pid
     inline juce::String modSourceId (int slot) { return "mod" + juce::String (slot) + "Src"; }
     inline juce::String modDestId    (int slot) { return "mod" + juce::String (slot) + "Dst"; }
     inline juce::String modDepthId   (int slot) { return "mod" + juce::String (slot) + "Depth"; }
+
+    //==============================================================================
+    // FX chain: Distortion -> Chorus -> Delay -> Reverb
+    inline constexpr auto distOn    = "distOn";
+    inline constexpr auto distType  = "distType";    // choice Soft/Hard/Fold
+    inline constexpr auto distDrive = "distDrive";
+    inline constexpr auto distMix   = "distMix";
+
+    inline constexpr auto chorusOn       = "chorusOn";
+    inline constexpr auto chorusRate     = "chorusRate";
+    inline constexpr auto chorusDepth    = "chorusDepth";
+    inline constexpr auto chorusFeedback = "chorusFeedback";
+    inline constexpr auto chorusMix      = "chorusMix";
+
+    inline constexpr auto delayOn       = "delayOn";
+    inline constexpr auto delaySync     = "delaySync";
+    inline constexpr auto delayTime     = "delayTime";   // ms (free)
+    inline constexpr auto delayDiv      = "delayDiv";    // sync division
+    inline constexpr auto delayFeedback = "delayFeedback";
+    inline constexpr auto delayMix      = "delayMix";
+    inline constexpr auto delayPingpong = "delayPingpong";
+
+    inline constexpr auto reverbOn      = "reverbOn";
+    inline constexpr auto reverbSize    = "reverbSize";
+    inline constexpr auto reverbDamping = "reverbDamping";
+    inline constexpr auto reverbWidth   = "reverbWidth";
+    inline constexpr auto reverbMix     = "reverbMix";
 }

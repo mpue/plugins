@@ -10,6 +10,7 @@
 
 #include <JuceHeader.h>
 #include "synth/PikeVoice.h"
+#include "dsp/fx/FxChain.h"
 
 //==============================================================================
 /**
@@ -76,6 +77,11 @@ private:
     std::atomic<float> modWheelShared        { 0.0f };
     std::atomic<float> aftertouchShared      { 0.0f };
     double lfoMonoPhaseAccum[2] { 0.0, 0.0 };
+    double currentBpm = 120.0;
+
+    // Global post-mix effects.
+    pike::FxChain fxChain;
+    pike::FxChain::Params readFxParams() const;
 
     /** Caches the APVTS atomics the voices read each block. */
     void cacheParameterPointers();

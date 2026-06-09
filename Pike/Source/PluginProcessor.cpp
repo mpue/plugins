@@ -119,12 +119,13 @@ void PikeAudioProcessor::updateModulationRuntime (const juce::MidiBuffer& midi, 
             aftertouchShared.store ((float) m.getAfterTouchValue() / 127.0f);
     }
 
-    // Tempo for synced LFO rates.
+    // Tempo for synced LFO rates and delay.
     double bpm = 120.0;
     if (auto* ph = getPlayHead())
         if (auto pos = ph->getPosition())
             if (auto b = pos->getBpm())
                 bpm = *b;
+    currentBpm = bpm;
 
     // LFO sync divisions: cycles per beat for "1/1".."1/32".
     static constexpr float divFactor[] = { 0.25f, 0.5f, 1.0f, 2.0f, 3.0f, 4.0f, 8.0f };
@@ -194,7 +195,8 @@ bool PikeAudioProcessor::isMidiEffect() const
 
 double PikeAudioProcessor::getTailLengthSeconds() const
 {
-    return 0.0;
+    // Reverb and feedback delay can ring after notes end; report a generous tail.
+    return 5.0;
 }
 
 int PikeAudioProcessor::getNumPrograms()
@@ -228,6 +230,8 @@ void PikeAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
     // Build the shared wavetable bank for this sample rate (not realtime).
     wavetable.prepare (sampleRate);
+
+    fxChain.prepare (sampleRate, samplesPerBlock, getTotalNumOutputChannels());
 
     synth.setCurrentPlaybackSampleRate (sampleRate);
 
@@ -280,10 +284,48 @@ void PikeAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
 
     synth.renderNextBlock (buffer, midiMessages, 0, buffer.getNumSamples());
 
+    // Global FX chain (Distortion -> Chorus -> Delay -> Reverb).
+    fxChain.process (buffer, readFxParams(), currentBpm);
+
     // Master gain (dB -> linear), applied to the whole block.
     const float gainDb     = apvts.getRawParameterValue (pid::masterGain)->load();
     const float gainLinear = juce::Decibels::decibelsToGain (gainDb);
     buffer.applyGain (gainLinear);
+}
+
+pike::FxChain::Params PikeAudioProcessor::readFxParams() const
+{
+    auto val  = [this] (const char* id) { return apvts.getRawParameterValue (id)->load(); };
+    auto flag = [this] (const char* id) { return apvts.getRawParameterValue (id)->load() > 0.5f; };
+
+    pike::FxChain::Params p;
+
+    p.distOn    = flag (pid::distOn);
+    p.distType  = (int) val (pid::distType);
+    p.distDrive = val (pid::distDrive);
+    p.distMix   = val (pid::distMix);
+
+    p.chorusOn       = flag (pid::chorusOn);
+    p.chorusRate     = val (pid::chorusRate);
+    p.chorusDepth    = val (pid::chorusDepth);
+    p.chorusFeedback = val (pid::chorusFeedback);
+    p.chorusMix      = val (pid::chorusMix);
+
+    p.delayOn       = flag (pid::delayOn);
+    p.delaySync     = flag (pid::delaySync);
+    p.delayTimeMs   = val (pid::delayTime);
+    p.delayDiv      = (int) val (pid::delayDiv);
+    p.delayFeedback = val (pid::delayFeedback);
+    p.delayMix      = val (pid::delayMix);
+    p.delayPingpong = flag (pid::delayPingpong);
+
+    p.reverbOn      = flag (pid::reverbOn);
+    p.reverbSize    = val (pid::reverbSize);
+    p.reverbDamping = val (pid::reverbDamping);
+    p.reverbWidth   = val (pid::reverbWidth);
+    p.reverbMix     = val (pid::reverbMix);
+
+    return p;
 }
 
 //==============================================================================

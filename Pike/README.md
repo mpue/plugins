@@ -107,7 +107,7 @@ gewartet.
 | **3** | Oszillator-Sektion vollständig (3 Osc, alle Wellenformen, PolyBLEP, Wavetable, Sync/FM/RingMod/Noise, Mixer) | ✅ |
 | **4** | Multimode-Filter + Filter-Env + Drive | ✅ |
 | **5** | LFOs + 3. Hüllkurve + Mod-Matrix | ✅ |
-| **6** | FX-Kette (Distortion, Chorus, Delay, Reverb) | ☐ |
+| **6** | FX-Kette (Distortion, Chorus, Delay, Reverb) | ✅ |
 | **7** | Arpeggiator + Voice-Modi (Mono/Legato/Unison/Glide) | ☐ |
 | **8** | GUI ausbauen, alle Parameter anbinden | ☐ |
 | **9** | Preset-System + Factory-Presets | ☐ |
@@ -241,3 +241,28 @@ Komplettes Modulationssystem. **108 Parameter** insgesamt.
 
 > Default: alle Matrix-Slots auf *None*, LFOs nicht geroutet → Klang identisch zu
 > Phase 4. Als Nächstes: FX-Kette (Phase 6).
+
+---
+
+## Phase 6 — Status
+
+Globale FX-Kette nach dem Voice-Mix, vor dem Master-Gain. **129 Parameter**.
+Reihenfolge **Distortion → Chorus → Delay → Reverb** (jeder Block einzeln
+zuschaltbar).
+
+- **Distortion** ([Distortion.h](Source/dsp/fx/Distortion.h), JUCE-frei):
+  Waveshaper mit **Soft (tanh) / Hard Clip / Wavefolder**, Drive, Mix, Makeup.
+- **Chorus**: `juce::dsp::Chorus` — Rate, Depth, Feedback, Mix (Ensemble-fähig).
+- **Delay** ([Delay.h](Source/dsp/fx/Delay.h), JUCE-frei): Stereo, fraktionale
+  (interpolierte) Taps, **Tempo-Sync** (1/1…1/32) oder freie Zeit (ms),
+  Feedback, **Ping-Pong**, sanfter High-Cut im Feedback-Pfad.
+- **Reverb**: `juce::Reverb` (Freeverb) — Size, Damping, Width, Mix.
+- **Integration** ([FxChain.h](Source/dsp/fx/FxChain.h)): einmal im Processor,
+  `prepare`/`process`; FX-Parameter pro Block aus der APVTS gelesen; Tempo vom
+  Playhead. `juce_dsp`-Modul ergänzt. `getTailLengthSeconds` meldet jetzt einen
+  Tail (Reverb/Delay-Ausklang).
+- **Verifiziert**: Build VST3/AU/Standalone + `auval` „AU VALIDATION SUCCEEDED"
+  (129 Parameter, Render- und MIDI-Test bestanden).
+
+> Default: alle vier Effekte **aus** → Klang identisch zu Phase 5.
+> Als Nächstes: Arpeggiator + Voice-Modi (Mono/Legato/Unison/Glide) (Phase 7).
