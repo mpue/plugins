@@ -9,6 +9,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "synth/PikeVoice.h"
 
 //==============================================================================
 /**
@@ -53,7 +54,22 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    //==============================================================================
+    /** The plugin's parameter tree. The editor binds its controls to this. */
+    juce::AudioProcessorValueTreeState& getValueTreeState() noexcept { return apvts; }
+
+    static constexpr int numVoices = 8;
+
 private:
+    //==============================================================================
+    juce::AudioProcessorValueTreeState apvts;
+
+    juce::Synthesiser synth;
+    pike::PikeVoice::Parameters voiceParameters;
+
+    /** Caches the APVTS atomics the voices read each block. */
+    void cacheParameterPointers();
+
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PikeAudioProcessor)
 };

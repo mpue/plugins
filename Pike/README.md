@@ -103,7 +103,7 @@ gewartet.
 | Phase | Inhalt | Status |
 |------:|--------|:------:|
 | **1** | Projucer-Projekt, leeres Synth-Plugin (VST3/AU/Standalone), erzeugt Stille, `ElegantDarkLookAndFeel` eingebunden, gebrandeter UI-Rahmen, Build verifiziert | ✅ |
-| **2** | APVTS-Parameter-Layout + Voice/Synthesiser-Gerüst (1 Osc → Amp-Env → Ausgang), polyphon spielbar | ☐ |
+| **2** | APVTS-Parameter-Layout + Voice/Synthesiser-Gerüst (1 Osc → Amp-Env → Ausgang), polyphon spielbar | ✅ |
 | **3** | Oszillator-Sektion vollständig (3 Osc, alle Wellenformen, PolyBLEP, Wavetable, Sync/FM/RingMod/Noise, Mixer) | ☐ |
 | **4** | Multimode-Filter + Filter-Env + Drive | ☐ |
 | **5** | LFOs + 3. Hüllkurve + Mod-Matrix | ☐ |
@@ -124,3 +124,27 @@ gewartet.
   die das spätere Layout vorzeichnen.
 - `processBlock` erzeugt Stille (MIDI wird bereits angenommen, aber noch nicht
   klingend verarbeitet).
+
+---
+
+## Phase 2 — Status
+
+- **APVTS-Parameter-Layout** (`Source/params/`): stabile String-IDs
+  (`ParameterIDs.h`) und `createParameterLayout()`. Parameter dieser Phase:
+  Master Gain (dB) + Amp-ADSR (Attack/Decay/Sustain/Release) mit musikalischer
+  Skew und lesbaren Wertanzeigen.
+- **Synthesiser-Gerüst**: `juce::Synthesiser` mit **8 Stimmen** und
+  Voice-Stealing. `PikeSound` (spricht auf alle Noten/Kanäle an) und `PikeVoice`
+  (1 Oszillator → Amp-Hüllkurve, velocity-sensitiv).
+- **DSP**: `pike::Oscillator` (Phasen-Akkumulator, sauberer Sinus) — JUCE-frei,
+  in Phase 3 um PolyBLEP/Wavetables erweiterbar. Hüllkurve via `juce::ADSR`.
+- **Realtime-safe**: die Stimmen lesen ihre ADSR-Werte direkt aus den
+  APVTS-Atomics (`getRawParameterValue`), keine Allokationen/Locks im Audio-Pfad.
+- **State**: `getStateInformation`/`setStateInformation` serialisieren den
+  kompletten Parameter-Baum als XML.
+- Verifiziert: Build (VST3/AU/Standalone) + `auval` (Render-Tests über alle
+  Sample-Rates und MIDI-Test bestanden, „AU VALIDATION SUCCEEDED").
+
+> Klangbild bewusst noch schlicht (ein Sinus pro Stimme). Das wird ab Phase 3
+> zur vollen Oszillator-Sektion ausgebaut. Die GUI zeigt weiterhin den
+> Sektions-Rahmen; das Anbinden der Regler folgt in Phase 8.

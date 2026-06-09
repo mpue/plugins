@@ -8,6 +8,9 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "params/ParameterLayout.h"
+#include "params/ParameterIDs.h"
+#include "synth/PikeSound.h"
 
 //==============================================================================
 PikeAudioProcessor::PikeAudioProcessor()
@@ -19,9 +22,27 @@ PikeAudioProcessor::PikeAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       )
+                       ),
+       apvts (*this, nullptr, "PARAMETERS", pike::createParameterLayout())
+#else
+     : apvts (*this, nullptr, "PARAMETERS", pike::createParameterLayout())
 #endif
 {
+    cacheParameterPointers();
+
+    synth.addSound (new pike::PikeSound());
+    for (int i = 0; i < numVoices; ++i)
+        synth.addVoice (new pike::PikeVoice (voiceParameters));
+
+    synth.setNoteStealingEnabled (true);
+}
+
+void PikeAudioProcessor::cacheParameterPointers()
+{
+    voiceParameters.ampAttack  = apvts.getRawParameterValue (pid::ampAttack);
+    voiceParameters.ampDecay   = apvts.getRawParameterValue (pid::ampDecay);
+    voiceParameters.ampSustain = apvts.getRawParameterValue (pid::ampSustain);
+    voiceParameters.ampRelease = apvts.getRawParameterValue (pid::ampRelease);
 }
 
 PikeAudioProcessor::~PikeAudioProcessor()
@@ -93,14 +114,19 @@ void PikeAudioProcessor::changeProgramName (int index, const juce::String& newNa
 //==============================================================================
 void PikeAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
+    juce::ignoreUnused (samplesPerBlock);
+
+    synth.setCurrentPlaybackSampleRate (sampleRate);
+
+    // Propagate the sample rate to every voice's DSP.
+    for (int i = 0; i < synth.getNumVoices(); ++i)
+        if (auto* voice = synth.getVoice (i))
+            voice->setCurrentPlaybackSampleRate (sampleRate);
 }
 
 void PikeAudioProcessor::releaseResources()
 {
-    // When playback stops, you can use this as an opportunity to free up any
-    // spare memory, etc.
+    // Nothing allocated outside prepareToPlay; voices reset themselves on note-off.
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -132,11 +158,17 @@ bool PikeAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) con
 void PikeAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
-    juce::ignoreUnused (midiMessages);
 
-    // Phase 1: Pike is a synth and produces silence. The MIDI buffer is already
-    // delivered to us; from Phase 2 the Synthesiser will render into the buffer.
+    // Synth instrument: no audio input. Start from silence, then let the voices
+    // render the active notes into the buffer.
     buffer.clear();
+
+    synth.renderNextBlock (buffer, midiMessages, 0, buffer.getNumSamples());
+
+    // Master gain (dB -> linear), applied to the whole block.
+    const float gainDb     = apvts.getRawParameterValue (pid::masterGain)->load();
+    const float gainLinear = juce::Decibels::decibelsToGain (gainDb);
+    buffer.applyGain (gainLinear);
 }
 
 //==============================================================================
@@ -153,15 +185,16 @@ juce::AudioProcessorEditor* PikeAudioProcessor::createEditor()
 //==============================================================================
 void PikeAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
+    // Serialise the whole parameter tree to XML (ValueTree-based state).
+    if (auto xml = apvts.copyState().createXml())
+        copyXmlToBinary (*xml, destData);
 }
 
 void PikeAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
+    if (auto xml = getXmlFromBinary (data, sizeInBytes))
+        if (xml->hasTagName (apvts.state.getType()))
+            apvts.replaceState (juce::ValueTree::fromXml (*xml));
 }
 
 //==============================================================================
