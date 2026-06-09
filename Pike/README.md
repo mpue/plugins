@@ -109,7 +109,7 @@ gewartet.
 | **5** | LFOs + 3. Hüllkurve + Mod-Matrix | ✅ |
 | **6** | FX-Kette (Distortion, Chorus, Delay, Reverb) | ✅ |
 | **7** | Arpeggiator + Voice-Modi (Mono/Legato/Unison/Glide) | ✅ |
-| **8** | GUI ausbauen, alle Parameter anbinden | ☐ |
+| **8** | GUI ausbauen, alle Parameter anbinden | ✅ |
 | **9** | Preset-System + Factory-Presets | ☐ |
 
 ---
@@ -295,3 +295,28 @@ Stimmen direkt), während der Processor zwischen MIDI-Events segmentiert rendert
 > Default: Arp aus, Voice-Mode Poly, Unison 1, Glide 0 → Klang identisch zu
 > Phase 6. Behaviorales Feintuning (Mono/Legato/Unison/Arp-Groove) am besten im
 > DAW/Standalone gegenchecken. Als Nächstes: GUI ausbauen (Phase 8).
+
+---
+
+## Phase 8 — Status
+
+Vollständige GUI: **alle 139 Parameter** an die APVTS gebunden, in klar
+gegliederten, scrollbaren Tab-Seiten, mit dem `ElegantDarkLookAndFeel`.
+
+- **Daten-getriebenes Framework** ([PikeUI.h](Source/gui/PikeUI.h)):
+  - `Control` — ein gebundenes Widget (Rotary-Knob / ComboBox / LED-Toggle) + Label,
+    inkl. APVTS-Attachment; Combos werden automatisch aus den Choice-Parametern befüllt.
+  - `Group` — titelnde Box, ordnet ihre Controls im Raster an.
+  - `Page` / `PageViewport` — fließt Gruppen um (wrap), scrollt bei Überlauf.
+- **5 Tabs**: *Oscillators* (Master, Osc 1-3, Routing/Mixer), *Filter / Env*
+  (Filter + Amp/Filter/Aux-ADSR), *Mod* (LFO 1/2 + 16 Matrix-Slots),
+  *FX* (Distortion/Chorus/Delay/Reverb), *Arp / Voice*.
+- Gebrandeter Header (PIKE-Logo, Version), resizable (820×480 … 2400×1500).
+- **Wertanzeigen** mit Einheiten (dB, %, ct, Hz, ms) über die Parameter-
+  `stringFromValue`-Funktionen; robust gerundet (`roundToInt`), keine
+  wissenschaftliche Notation bei Bipolar-Nullwerten.
+- **Verifiziert**: Build VST3/AU/Standalone, `auval` „AU VALIDATION SUCCEEDED"
+  (Cocoa-View vorhanden) und **visuell im Standalone** alle Tabs gegengecheckt
+  (Defaults korrekt, Knöpfe/Combos/Toggles korrekt gebunden und beschriftet).
+
+> Als Nächstes: Preset-System + Factory-Presets (Phase 9).

@@ -29,7 +29,7 @@ namespace pike
 
         juce::String secondsText (float v, int)
         {
-            return v < 1.0f ? juce::String (v * 1000.0f, 0) + " ms"
+            return v < 1.0f ? juce::String (juce::roundToInt (v * 1000.0f)) + " ms"
                             : juce::String (v, 2) + " s";
         }
     }
@@ -68,7 +68,7 @@ namespace pike
                 ID { pid::ampSustain, pid::version }, "Amp Sustain",
                 Range (0.0f, 1.0f, 0.001f), 0.8f,
                 juce::AudioParameterFloatAttributes()
-                    .withStringFromValueFunction ([] (float v, int) { return juce::String (v * 100.0f, 0) + " %"; })));
+                    .withStringFromValueFunction ([] (float v, int) { return juce::String (juce::roundToInt (v * 100.0f)) + " %"; })));
 
             layout.add (std::make_unique<APF> (
                 ID { pid::ampRelease, pid::version }, "Amp Release",
@@ -83,7 +83,7 @@ namespace pike
             // Only osc 1 sounds by default; 2 and 3 start silent.
             const float defaultLevel[3] = { 0.8f, 0.0f, 0.0f };
 
-            auto pctText = [] (float v, int) { return juce::String (v * 100.0f, 0) + " %"; };
+            auto pctText = [] (float v, int) { return juce::String (juce::roundToInt (v * 100.0f)) + " %"; };
 
             for (int n = 0; n < 3; ++n)
             {
@@ -125,7 +125,7 @@ namespace pike
         //======================================================================
         // Oscillator routing / mixer
         {
-            auto pctText = [] (float v, int) { return juce::String (v * 100.0f, 0) + " %"; };
+            auto pctText = [] (float v, int) { return juce::String (juce::roundToInt (v * 100.0f)) + " %"; };
 
             layout.add (std::make_unique<juce::AudioParameterBool> (
                 ID { pid::osc2Sync, pid::version }, "Osc2 Sync", false));
@@ -172,7 +172,7 @@ namespace pike
                                             : juce::String (v, 0) + " Hz";
                     })));
 
-            auto pctText = [] (float v, int) { return juce::String (v * 100.0f, 0) + " %"; };
+            auto pctText = [] (float v, int) { return juce::String (juce::roundToInt (v * 100.0f)) + " %"; };
 
             layout.add (std::make_unique<APF> (
                 ID { pid::filterResonance, pid::version }, "Resonance",
@@ -213,7 +213,7 @@ namespace pike
                 ID { pid::filtSustain, pid::version }, "Filter Sustain",
                 Range (0.0f, 1.0f, 0.001f), 0.6f,
                 juce::AudioParameterFloatAttributes()
-                    .withStringFromValueFunction ([] (float v, int) { return juce::String (v * 100.0f, 0) + " %"; })));
+                    .withStringFromValueFunction ([] (float v, int) { return juce::String (juce::roundToInt (v * 100.0f)) + " %"; })));
 
             layout.add (std::make_unique<APF> (
                 ID { pid::filtRelease, pid::version }, "Filter Release",
@@ -236,7 +236,7 @@ namespace pike
                 ID { pid::auxSustain, pid::version }, "Aux Sustain",
                 Range (0.0f, 1.0f, 0.001f), 0.5f,
                 juce::AudioParameterFloatAttributes()
-                    .withStringFromValueFunction ([] (float v, int) { return juce::String (v * 100.0f, 0) + " %"; })));
+                    .withStringFromValueFunction ([] (float v, int) { return juce::String (juce::roundToInt (v * 100.0f)) + " %"; })));
             layout.add (std::make_unique<APF> (
                 ID { pid::auxRelease, pid::version }, "Aux Release",
                 timeRange (0.001f, 12.0f, 0.3f), 0.3f, attrSeconds));
@@ -303,14 +303,14 @@ namespace pike
                     ID { pid::modDepthId (s), pid::version }, label + "Depth",
                     Range (-1.0f, 1.0f, 0.001f), 0.0f,
                     juce::AudioParameterFloatAttributes()
-                        .withStringFromValueFunction ([] (float v, int) { return juce::String (v * 100.0f, 0) + " %"; })));
+                        .withStringFromValueFunction ([] (float v, int) { return juce::String (juce::roundToInt (v * 100.0f)) + " %"; })));
             }
         }
 
         //======================================================================
         // FX chain
         {
-            auto pctText = [] (float v, int) { return juce::String (v * 100.0f, 0) + " %"; };
+            auto pctText = [] (float v, int) { return juce::String (juce::roundToInt (v * 100.0f)) + " %"; };
 
             // Distortion
             layout.add (std::make_unique<juce::AudioParameterBool> (
@@ -406,7 +406,7 @@ namespace pike
         //======================================================================
         // Arpeggiator
         {
-            auto pctText = [] (float v, int) { return juce::String (v * 100.0f, 0) + " %"; };
+            auto pctText = [] (float v, int) { return juce::String (juce::roundToInt (v * 100.0f)) + " %"; };
 
             layout.add (std::make_unique<juce::AudioParameterBool> (
                 ID { pid::arpOn, pid::version }, "Arp On", false));

@@ -19,6 +19,10 @@
       <FILE id="YHaBDL" name="PluginEditor.cpp" compile="1" resource="0"
             file="Source/PluginEditor.cpp"/>
       <FILE id="t02QAP" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
+      <GROUP id="pkGui1" name="gui">
+        <FILE id="pkUi01" name="PikeUI.h" compile="0" resource="0"
+              file="Source/gui/PikeUI.h"/>
+      </GROUP>
       <GROUP id="pkParams1" name="params">
         <FILE id="pkPid01" name="ParameterIDs.h" compile="0" resource="0"
               file="Source/params/ParameterIDs.h"/>
