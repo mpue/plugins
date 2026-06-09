@@ -44,4 +44,21 @@ namespace pid
     inline constexpr auto fmAmount     = "fmAmount";      // osc3 -> osc1 FM depth
     inline constexpr auto ringModLevel = "ringModLevel";  // osc1 x osc2 into mix
     inline constexpr auto noiseLevel   = "noiseLevel";    // noise into mix
+
+    //==============================================================================
+    // Filter
+    inline constexpr auto filterType      = "filterType";      // choice LP/BP/HP
+    inline constexpr auto filterSlope     = "filterSlope";     // choice 12/24 dB
+    inline constexpr auto filterCutoff    = "filterCutoff";    // Hz
+    inline constexpr auto filterResonance = "filterResonance"; // 0..1
+    inline constexpr auto filterKeyTrack  = "filterKeyTrack";  // 0..1
+    inline constexpr auto filterDrive     = "filterDrive";     // 0..1 pre-filter overdrive
+    inline constexpr auto filterEnvAmount = "filterEnvAmount"; // -1..1 (octaves)
+
+    //==============================================================================
+    // Filter envelope (ADSR)
+    inline constexpr auto filtAttack  = "filtAttack";
+    inline constexpr auto filtDecay   = "filtDecay";
+    inline constexpr auto filtSustain = "filtSustain";
+    inline constexpr auto filtRelease = "filtRelease";
 }

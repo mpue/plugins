@@ -147,6 +147,78 @@ namespace pike
                 juce::AudioParameterFloatAttributes().withStringFromValueFunction (pctText)));
         }
 
+        //======================================================================
+        // Filter
+        {
+            layout.add (std::make_unique<juce::AudioParameterChoice> (
+                ID { pid::filterType, pid::version }, "Filter Type",
+                juce::StringArray { "Low Pass", "Band Pass", "High Pass" }, 0));
+
+            layout.add (std::make_unique<juce::AudioParameterChoice> (
+                ID { pid::filterSlope, pid::version }, "Filter Slope",
+                juce::StringArray { "12 dB/oct", "24 dB/oct" }, 0));
+
+            Range cutoffRange (20.0f, 20000.0f);
+            cutoffRange.setSkewForCentre (1000.0f);
+            layout.add (std::make_unique<APF> (
+                ID { pid::filterCutoff, pid::version }, "Cutoff",
+                cutoffRange, 20000.0f,
+                juce::AudioParameterFloatAttributes()
+                    .withLabel ("Hz")
+                    .withStringFromValueFunction ([] (float v, int)
+                    {
+                        return v >= 1000.0f ? juce::String (v / 1000.0f, 2) + " kHz"
+                                            : juce::String (v, 0) + " Hz";
+                    })));
+
+            auto pctText = [] (float v, int) { return juce::String (v * 100.0f, 0) + " %"; };
+
+            layout.add (std::make_unique<APF> (
+                ID { pid::filterResonance, pid::version }, "Resonance",
+                Range (0.0f, 1.0f, 0.001f), 0.0f,
+                juce::AudioParameterFloatAttributes().withStringFromValueFunction (pctText)));
+
+            layout.add (std::make_unique<APF> (
+                ID { pid::filterKeyTrack, pid::version }, "Key Track",
+                Range (0.0f, 1.0f, 0.001f), 0.0f,
+                juce::AudioParameterFloatAttributes().withStringFromValueFunction (pctText)));
+
+            layout.add (std::make_unique<APF> (
+                ID { pid::filterDrive, pid::version }, "Drive",
+                Range (0.0f, 1.0f, 0.001f), 0.0f,
+                juce::AudioParameterFloatAttributes().withStringFromValueFunction (pctText)));
+
+            layout.add (std::make_unique<APF> (
+                ID { pid::filterEnvAmount, pid::version }, "Filter Env Amount",
+                Range (-1.0f, 1.0f, 0.001f), 0.0f,
+                juce::AudioParameterFloatAttributes().withStringFromValueFunction (pctText)));
+        }
+
+        //======================================================================
+        // Filter envelope
+        {
+            auto attrSeconds = juce::AudioParameterFloatAttributes()
+                                   .withStringFromValueFunction (secondsText);
+
+            layout.add (std::make_unique<APF> (
+                ID { pid::filtAttack, pid::version }, "Filter Attack",
+                timeRange (0.001f, 10.0f, 0.05f), 0.005f, attrSeconds));
+
+            layout.add (std::make_unique<APF> (
+                ID { pid::filtDecay, pid::version }, "Filter Decay",
+                timeRange (0.001f, 10.0f, 0.2f), 0.2f, attrSeconds));
+
+            layout.add (std::make_unique<APF> (
+                ID { pid::filtSustain, pid::version }, "Filter Sustain",
+                Range (0.0f, 1.0f, 0.001f), 0.6f,
+                juce::AudioParameterFloatAttributes()
+                    .withStringFromValueFunction ([] (float v, int) { return juce::String (v * 100.0f, 0) + " %"; })));
+
+            layout.add (std::make_unique<APF> (
+                ID { pid::filtRelease, pid::version }, "Filter Release",
+                timeRange (0.001f, 12.0f, 0.3f), 0.3f, attrSeconds));
+        }
+
         return layout;
     }
 }

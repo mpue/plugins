@@ -20,6 +20,7 @@
 #include "../dsp/Oscillator.h"
 #include "../dsp/Wavetable.h"
 #include "../dsp/Noise.h"
+#include "../dsp/Filter.h"
 
 namespace pike
 {
@@ -56,6 +57,21 @@ namespace pike
             std::atomic<float>* ringModLevel = nullptr;
             std::atomic<float>* noiseLevel   = nullptr;
 
+            // Filter
+            std::atomic<float>* filterType      = nullptr;
+            std::atomic<float>* filterSlope     = nullptr;
+            std::atomic<float>* filterCutoff    = nullptr;
+            std::atomic<float>* filterResonance = nullptr;
+            std::atomic<float>* filterKeyTrack  = nullptr;
+            std::atomic<float>* filterDrive     = nullptr;
+            std::atomic<float>* filterEnvAmount = nullptr;
+
+            // Filter envelope
+            std::atomic<float>* filtAttack  = nullptr;
+            std::atomic<float>* filtDecay   = nullptr;
+            std::atomic<float>* filtSustain = nullptr;
+            std::atomic<float>* filtRelease = nullptr;
+
             // Shared, read-only wavetable bank (owned by the processor).
             const Wavetable* wavetable = nullptr;
         };
@@ -82,6 +98,8 @@ namespace pike
                     o.setSampleRate (newRate);
 
                 ampEnvelope.setSampleRate (newRate);
+                filterEnvelope.setSampleRate (newRate);
+                filter.setSampleRate (newRate);
             }
         }
 
@@ -89,8 +107,9 @@ namespace pike
         void startNote (int midiNoteNumber, float velocity,
                         juce::SynthesiserSound*, int /*currentPitchWheelPosition*/) override
         {
-            level   = velocity;
-            noteHz  = juce::MidiMessage::getMidiNoteInHertz (midiNoteNumber);
+            level    = velocity;
+            midiNote = midiNoteNumber;
+            noteHz   = juce::MidiMessage::getMidiNoteInHertz (midiNoteNumber);
             lastOsc3 = 0.0f;
 
             noise.seed ((uint32_t) (midiNoteNumber * 2654435761u) ^ 0x9e3779b9u);
@@ -98,9 +117,13 @@ namespace pike
             for (auto& o : oscillators)
                 o.resetPhase();
 
+            filter.reset();
+
             updateEnvelopeParameters();
             updateOscillatorParameters();
+            updateFilterParameters();
             ampEnvelope.noteOn();
+            filterEnvelope.noteOn();
         }
 
         void stopNote (float /*velocity*/, bool allowTailOff) override
@@ -108,10 +131,12 @@ namespace pike
             if (allowTailOff)
             {
                 ampEnvelope.noteOff();
+                filterEnvelope.noteOff();
             }
             else
             {
                 ampEnvelope.reset();
+                filterEnvelope.reset();
                 clearCurrentNote();
             }
         }
@@ -128,6 +153,7 @@ namespace pike
 
             updateEnvelopeParameters();
             updateOscillatorParameters();
+            updateFilterParameters();
 
             const int numChannels = outputBuffer.getNumChannels();
 
@@ -155,8 +181,20 @@ namespace pike
                           + ringModLevel * (o1 * o2)
                           + noiseLevel * noise.processSample();
 
+                // Pre-filter drive (clean at 0, soft overdrive as it opens up).
+                if (drive > 0.0001f)
+                    mix += drive * (std::tanh (mix * drivePreGain) - mix);
+
+                // Filter envelope modulates cutoff (in octaves), plus key-track.
+                const float fenv   = filterEnvelope.getNextSample();
+                const double octs  = keyTrackOctaves + (double) (filterEnvAmount * fenv) * filterEnvRangeOct;
+                const float cutoff = (float) (baseCutoff * std::exp2 (octs));
+                filter.setCutoff (cutoff);
+
+                const float filtered = filter.process (mix);
+
                 const float env    = ampEnvelope.getNextSample();
-                const float sample = mix * env * level;
+                const float sample = filtered * env * level;
 
                 for (int ch = 0; ch < numChannels; ++ch)
                     outputBuffer.addSample (ch, startSample + i, sample);
@@ -212,13 +250,40 @@ namespace pike
             noiseLevel   = parameters.noiseLevel   != nullptr ? parameters.noiseLevel->load()   : 0.0f;
         }
 
-        static constexpr float fmDepth = 4.0f;   // maps fmAmount 0..1 to a musical index
+        void updateFilterParameters() noexcept
+        {
+            const int typeIndex = parameters.filterType != nullptr ? (int) parameters.filterType->load() : 0;
+            filter.setType (static_cast<FilterType> (typeIndex));
+            filter.setSlope24 (parameters.filterSlope != nullptr && parameters.filterSlope->load() > 0.5f);
+            filter.setResonance (parameters.filterResonance != nullptr ? parameters.filterResonance->load() : 0.0f);
+
+            baseCutoff      = parameters.filterCutoff    != nullptr ? parameters.filterCutoff->load()    : 20000.0f;
+            drive           = parameters.filterDrive     != nullptr ? parameters.filterDrive->load()     : 0.0f;
+            filterEnvAmount = parameters.filterEnvAmount != nullptr ? parameters.filterEnvAmount->load() : 0.0f;
+            drivePreGain    = 1.0f + drive * 15.0f;
+
+            const float keyTrack = parameters.filterKeyTrack != nullptr ? parameters.filterKeyTrack->load() : 0.0f;
+            keyTrackOctaves = keyTrack * (double) (midiNote - 60) / 12.0;
+
+            juce::ADSR::Parameters p;
+            p.attack  = parameters.filtAttack  != nullptr ? parameters.filtAttack ->load() : 0.005f;
+            p.decay   = parameters.filtDecay   != nullptr ? parameters.filtDecay  ->load() : 0.2f;
+            p.sustain = parameters.filtSustain != nullptr ? parameters.filtSustain->load() : 0.6f;
+            p.release = parameters.filtRelease != nullptr ? parameters.filtRelease->load() : 0.3f;
+            filterEnvelope.setParameters (p);
+        }
+
+        static constexpr float  fmDepth            = 4.0f;   // maps fmAmount 0..1 to a musical index
+        static constexpr double filterEnvRangeOct  = 6.0;    // filter env full-scale range (octaves)
 
         Parameters parameters;
         Oscillator oscillators[numOscillators];
         Noise      noise;
         juce::ADSR ampEnvelope;
+        juce::ADSR filterEnvelope;
+        StateVariableFilter filter;
 
+        int    midiNote = 60;
         double noteHz   = 440.0;
         double osc1Hz   = 440.0;
         float  level    = 0.0f;   // velocity-scaled amplitude
@@ -228,5 +293,12 @@ namespace pike
         float oscLevel[numOscillators] { 0.0f, 0.0f, 0.0f };
         bool  sync2 = false, sync3 = false;
         float fmAmount = 0.0f, ringModLevel = 0.0f, noiseLevel = 0.0f;
+
+        // Cached per-block filter state.
+        double baseCutoff      = 20000.0;
+        double keyTrackOctaves = 0.0;
+        float  drive           = 0.0f;
+        float  drivePreGain    = 1.0f;
+        float  filterEnvAmount = 0.0f;
     };
 }

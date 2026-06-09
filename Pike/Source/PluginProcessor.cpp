@@ -62,6 +62,19 @@ void PikeAudioProcessor::cacheParameterPointers()
     voiceParameters.ringModLevel = apvts.getRawParameterValue (pid::ringModLevel);
     voiceParameters.noiseLevel   = apvts.getRawParameterValue (pid::noiseLevel);
 
+    voiceParameters.filterType      = apvts.getRawParameterValue (pid::filterType);
+    voiceParameters.filterSlope     = apvts.getRawParameterValue (pid::filterSlope);
+    voiceParameters.filterCutoff    = apvts.getRawParameterValue (pid::filterCutoff);
+    voiceParameters.filterResonance = apvts.getRawParameterValue (pid::filterResonance);
+    voiceParameters.filterKeyTrack  = apvts.getRawParameterValue (pid::filterKeyTrack);
+    voiceParameters.filterDrive     = apvts.getRawParameterValue (pid::filterDrive);
+    voiceParameters.filterEnvAmount = apvts.getRawParameterValue (pid::filterEnvAmount);
+
+    voiceParameters.filtAttack  = apvts.getRawParameterValue (pid::filtAttack);
+    voiceParameters.filtDecay   = apvts.getRawParameterValue (pid::filtDecay);
+    voiceParameters.filtSustain = apvts.getRawParameterValue (pid::filtSustain);
+    voiceParameters.filtRelease = apvts.getRawParameterValue (pid::filtRelease);
+
     voiceParameters.wavetable = &wavetable;
 }
 

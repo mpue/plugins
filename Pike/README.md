@@ -105,7 +105,7 @@ gewartet.
 | **1** | Projucer-Projekt, leeres Synth-Plugin (VST3/AU/Standalone), erzeugt Stille, `ElegantDarkLookAndFeel` eingebunden, gebrandeter UI-Rahmen, Build verifiziert | ✅ |
 | **2** | APVTS-Parameter-Layout + Voice/Synthesiser-Gerüst (1 Osc → Amp-Env → Ausgang), polyphon spielbar | ✅ |
 | **3** | Oszillator-Sektion vollständig (3 Osc, alle Wellenformen, PolyBLEP, Wavetable, Sync/FM/RingMod/Noise, Mixer) | ✅ |
-| **4** | Multimode-Filter + Filter-Env + Drive | ☐ |
+| **4** | Multimode-Filter + Filter-Env + Drive | ✅ |
 | **5** | LFOs + 3. Hüllkurve + Mod-Matrix | ☐ |
 | **6** | FX-Kette (Distortion, Chorus, Delay, Reverb) | ☐ |
 | **7** | Arpeggiator + Voice-Modi (Mono/Legato/Unison/Glide) | ☐ |
@@ -181,3 +181,34 @@ Vollständige Oszillator-Sektion, alles realtime-safe und JUCE-frei in `dsp/`
 
 > Default-Klang weiterhin Osc1 (Sine, Level 0.8), Osc2/3 stumm — bestehende
 > Presets/Verhalten bleiben kompatibel. Multimode-Filter folgt in Phase 4.
+
+---
+
+## Phase 4 — Status
+
+Multimode-Filter, Filter-Hüllkurve und Pre-Filter-Drive, alles per Stimme.
+
+- **Filter** ([Filter.h](Source/dsp/Filter.h)): State-Variable-Filter in
+  TPT-Topologie (Cytomic/Zavalishin) — **LP / BP / HP**, umschaltbar
+  **12 / 24 dB/Okt**, Resonanz, Key-Tracking.
+  - 24 dB cascadiert zwei Stufen, aber nur die erste trägt die Resonanz (zweite
+    = Butterworth) → musikalischer Peak statt quadriertem Q.
+  - Resonanz mit exponentiellem Q-Verlauf bis zur **echten Selbstoszillation**
+    bei 100 %; der Resonanz-Integrator wird sanft sättigend begrenzt → saubere,
+    gebündelte Selbstoszillation, bei normalen Pegeln linear.
+- **Pre-Filter-Drive**: weiche `tanh`-Übersteuerung vor dem Filter (clean bei 0,
+  charaktervoll beim Aufdrehen).
+- **Filter-Hüllkurve**: eigene ADSR, bipolarer Env-Amount (±6 Oktaven),
+  Key-Tracking addiert sich; Cutoff-Modulation auf Sample-Rate.
+- **Signalkette pro Stimme**: 3 Osc → Mixer (+RingMod/Noise) → Drive → Filter →
+  Amp-VCA (Amp-Env × Velocity).
+- **Verifiziert**:
+  - Offline-DSP-Test: LP/BP/HP filtern korrekt (LP12 @500 Hz: RMS-Ratio 0.14,
+    LP24 0.12), Resonanz bei 100 % bleibt **begrenzt** (Peak 1.4–1.9 statt
+    Explosion) und **oszilliert selbst** (Tail-RMS 0.18), alle finite.
+  - Build VST3/AU/Standalone + `auval` „AU VALIDATION SUCCEEDED" (42 Parameter,
+    Render- und MIDI-Test bestanden).
+
+> Default: Filter LP, 12 dB, Cutoff 20 kHz (offen), Resonanz/Drive/Env 0 →
+> klanglich transparent, bestehendes Verhalten bleibt kompatibel.
+> Als Nächstes: LFOs, 3. Hüllkurve und Mod-Matrix (Phase 5).

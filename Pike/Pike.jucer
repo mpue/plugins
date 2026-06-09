@@ -34,6 +34,8 @@
               file="Source/dsp/Wavetable.h"/>
         <FILE id="pkNz01" name="Noise.h" compile="0" resource="0"
               file="Source/dsp/Noise.h"/>
+        <FILE id="pkFlt01" name="Filter.h" compile="0" resource="0"
+              file="Source/dsp/Filter.h"/>
       </GROUP>
       <GROUP id="pkSynth1" name="synth">
         <FILE id="pkSnd01" name="PikeSound.h" compile="0" resource="0"
