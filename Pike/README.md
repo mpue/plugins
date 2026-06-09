@@ -104,7 +104,7 @@ gewartet.
 |------:|--------|:------:|
 | **1** | Projucer-Projekt, leeres Synth-Plugin (VST3/AU/Standalone), erzeugt Stille, `ElegantDarkLookAndFeel` eingebunden, gebrandeter UI-Rahmen, Build verifiziert | ✅ |
 | **2** | APVTS-Parameter-Layout + Voice/Synthesiser-Gerüst (1 Osc → Amp-Env → Ausgang), polyphon spielbar | ✅ |
-| **3** | Oszillator-Sektion vollständig (3 Osc, alle Wellenformen, PolyBLEP, Wavetable, Sync/FM/RingMod/Noise, Mixer) | ☐ |
+| **3** | Oszillator-Sektion vollständig (3 Osc, alle Wellenformen, PolyBLEP, Wavetable, Sync/FM/RingMod/Noise, Mixer) | ✅ |
 | **4** | Multimode-Filter + Filter-Env + Drive | ☐ |
 | **5** | LFOs + 3. Hüllkurve + Mod-Matrix | ☐ |
 | **6** | FX-Kette (Distortion, Chorus, Delay, Reverb) | ☐ |
@@ -148,3 +148,36 @@ gewartet.
 > Klangbild bewusst noch schlicht (ein Sinus pro Stimme). Das wird ab Phase 3
 > zur vollen Oszillator-Sektion ausgebaut. Die GUI zeigt weiterhin den
 > Sektions-Rahmen; das Anbinden der Regler folgt in Phase 8.
+
+---
+
+## Phase 3 — Status
+
+Vollständige Oszillator-Sektion, alles realtime-safe und JUCE-frei in `dsp/`
+(damit unit-test-bar).
+
+- **3 Oszillatoren**, je mit Wellenform-Auswahl **Sine / Triangle / Saw / Pulse
+  / Wavetable**, plus Octave (-3..+3), Semitone (±12), Fine-Tune (±100 ct),
+  Level und Pulsweite.
+- **Anti-Aliasing**: `pike::Oscillator` mit **PolyBLEP** für Saw/Pulse und einem
+  band-limitierten, integrierten Dreieck (auf Einheitspegel normiert).
+- **Wavetable-Modus**: `pike::Wavetable` — morphbare Bank (Sine→Tri→Saw→Square)
+  mit **mip-gemappten, band-limitierten Tabellen** pro Oktave (additive
+  Synthese, kein Aliasing). Einmal im Processor gebaut und read-only über alle
+  Stimmen/Oszillatoren geteilt.
+- **Modulation/Routing**: **Hard-Sync** (Osc1 = Master → Osc2/3), **FM**
+  (Osc3 → Osc1, regelbar), **Ring-Modulation** (Osc1 × Osc2), separater
+  **Noise-Generator** (`pike::Noise`, xorshift).
+- **Mixer**: Per-Osc-Level + Ring-Mod-Level + Noise-Level.
+- **Parameter-Updates** auf Block-Rate (Tuning/Shape), DSP auf Sample-Rate;
+  Stimmen lesen weiterhin direkt aus den APVTS-Atomics.
+- **Verifiziert**:
+  - Offline-DSP-Test (JUCE-frei kompiliert): alle Wellenformen finite,
+    Pegel korrekt (Sine 1.00, Triangle 1.01/RMS 0.577, Saw 0.98, Pulse 1.00),
+    Anti-Aliasing greift (Saw @ 8 kHz: Peak 0.67), Wavetable-Morph, FM+Sync und
+    Noise stabil.
+  - Build VST3/AU/Standalone + `auval` „AU VALIDATION SUCCEEDED" (31 Parameter,
+    Render- und MIDI-Test bestanden).
+
+> Default-Klang weiterhin Osc1 (Sine, Level 0.8), Osc2/3 stumm — bestehende
+> Presets/Verhalten bleiben kompatibel. Multimode-Filter folgt in Phase 4.

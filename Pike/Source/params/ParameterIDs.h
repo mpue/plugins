@@ -26,4 +26,22 @@ namespace pid
     inline constexpr auto ampDecay   = "ampDecay";     // seconds
     inline constexpr auto ampSustain = "ampSustain";   // 0..1
     inline constexpr auto ampRelease = "ampRelease";   // seconds
+
+    //==============================================================================
+    // Oscillators 1..3 (index 0..2). Per-oscillator parameter IDs.
+    inline constexpr const char* oscWave[3]   = { "osc1Wave",   "osc2Wave",   "osc3Wave"   }; // choice
+    inline constexpr const char* oscOctave[3] = { "osc1Octave", "osc2Octave", "osc3Octave" }; // -3..+3
+    inline constexpr const char* oscSemi[3]   = { "osc1Semi",   "osc2Semi",   "osc3Semi"   }; // -12..+12
+    inline constexpr const char* oscFine[3]   = { "osc1Fine",   "osc2Fine",   "osc3Fine"   }; // cents
+    inline constexpr const char* oscLevel[3]  = { "osc1Level",  "osc2Level",  "osc3Level"  }; // 0..1
+    inline constexpr const char* oscPW[3]     = { "osc1PW",     "osc2PW",     "osc3PW"     }; // pulse width
+    inline constexpr const char* oscWtPos[3]  = { "osc1WtPos",  "osc2WtPos",  "osc3WtPos"  }; // wavetable pos
+
+    //==============================================================================
+    // Oscillator routing / mixer
+    inline constexpr auto osc2Sync     = "osc2Sync";      // hard-sync osc2 to osc1
+    inline constexpr auto osc3Sync     = "osc3Sync";      // hard-sync osc3 to osc1
+    inline constexpr auto fmAmount     = "fmAmount";      // osc3 -> osc1 FM depth
+    inline constexpr auto ringModLevel = "ringModLevel";  // osc1 x osc2 into mix
+    inline constexpr auto noiseLevel   = "noiseLevel";    // noise into mix
 }

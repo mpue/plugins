@@ -43,6 +43,26 @@ void PikeAudioProcessor::cacheParameterPointers()
     voiceParameters.ampDecay   = apvts.getRawParameterValue (pid::ampDecay);
     voiceParameters.ampSustain = apvts.getRawParameterValue (pid::ampSustain);
     voiceParameters.ampRelease = apvts.getRawParameterValue (pid::ampRelease);
+
+    for (int n = 0; n < pike::PikeVoice::numOscillators; ++n)
+    {
+        auto& o = voiceParameters.osc[n];
+        o.wave       = apvts.getRawParameterValue (pid::oscWave[n]);
+        o.octave     = apvts.getRawParameterValue (pid::oscOctave[n]);
+        o.semi       = apvts.getRawParameterValue (pid::oscSemi[n]);
+        o.fine       = apvts.getRawParameterValue (pid::oscFine[n]);
+        o.level      = apvts.getRawParameterValue (pid::oscLevel[n]);
+        o.pulseWidth = apvts.getRawParameterValue (pid::oscPW[n]);
+        o.wtPos      = apvts.getRawParameterValue (pid::oscWtPos[n]);
+    }
+
+    voiceParameters.osc2Sync     = apvts.getRawParameterValue (pid::osc2Sync);
+    voiceParameters.osc3Sync     = apvts.getRawParameterValue (pid::osc3Sync);
+    voiceParameters.fmAmount     = apvts.getRawParameterValue (pid::fmAmount);
+    voiceParameters.ringModLevel = apvts.getRawParameterValue (pid::ringModLevel);
+    voiceParameters.noiseLevel   = apvts.getRawParameterValue (pid::noiseLevel);
+
+    voiceParameters.wavetable = &wavetable;
 }
 
 PikeAudioProcessor::~PikeAudioProcessor()
@@ -115,6 +135,9 @@ void PikeAudioProcessor::changeProgramName (int index, const juce::String& newNa
 void PikeAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     juce::ignoreUnused (samplesPerBlock);
+
+    // Build the shared wavetable bank for this sample rate (not realtime).
+    wavetable.prepare (sampleRate);
 
     synth.setCurrentPlaybackSampleRate (sampleRate);
 

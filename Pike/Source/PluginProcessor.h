@@ -67,6 +67,9 @@ private:
     juce::Synthesiser synth;
     pike::PikeVoice::Parameters voiceParameters;
 
+    // Shared, read-only wavetable bank built in prepareToPlay.
+    pike::Wavetable wavetable;
+
     /** Caches the APVTS atomics the voices read each block. */
     void cacheParameterPointers();
 

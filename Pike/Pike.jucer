@@ -30,6 +30,10 @@
       <GROUP id="pkDsp1" name="dsp">
         <FILE id="pkOsc01" name="Oscillator.h" compile="0" resource="0"
               file="Source/dsp/Oscillator.h"/>
+        <FILE id="pkWt01" name="Wavetable.h" compile="0" resource="0"
+              file="Source/dsp/Wavetable.h"/>
+        <FILE id="pkNz01" name="Noise.h" compile="0" resource="0"
+              file="Source/dsp/Noise.h"/>
       </GROUP>
       <GROUP id="pkSynth1" name="synth">
         <FILE id="pkSnd01" name="PikeSound.h" compile="0" resource="0"
