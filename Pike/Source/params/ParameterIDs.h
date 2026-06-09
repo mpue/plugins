@@ -113,4 +113,20 @@ namespace pid
     inline constexpr auto reverbDamping = "reverbDamping";
     inline constexpr auto reverbWidth   = "reverbWidth";
     inline constexpr auto reverbMix     = "reverbMix";
+
+    //==============================================================================
+    // Arpeggiator
+    inline constexpr auto arpOn      = "arpOn";
+    inline constexpr auto arpMode    = "arpMode";     // Up/Down/UpDown/Random/AsPlayed
+    inline constexpr auto arpRate    = "arpRate";     // sync division
+    inline constexpr auto arpGate    = "arpGate";     // 0..1
+    inline constexpr auto arpOctaves = "arpOctaves";  // 1..4
+    inline constexpr auto arpLatch   = "arpLatch";
+
+    //==============================================================================
+    // Voice mode / unison / glide
+    inline constexpr auto voiceMode    = "voiceMode";    // Poly/Mono/Legato
+    inline constexpr auto unisonCount  = "unisonCount";  // 1..7
+    inline constexpr auto unisonDetune = "unisonDetune"; // cents
+    inline constexpr auto glideTime    = "glideTime";    // seconds (0 = off)
 }

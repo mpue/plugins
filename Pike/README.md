@@ -108,7 +108,7 @@ gewartet.
 | **4** | Multimode-Filter + Filter-Env + Drive | ✅ |
 | **5** | LFOs + 3. Hüllkurve + Mod-Matrix | ✅ |
 | **6** | FX-Kette (Distortion, Chorus, Delay, Reverb) | ✅ |
-| **7** | Arpeggiator + Voice-Modi (Mono/Legato/Unison/Glide) | ☐ |
+| **7** | Arpeggiator + Voice-Modi (Mono/Legato/Unison/Glide) | ✅ |
 | **8** | GUI ausbauen, alle Parameter anbinden | ☐ |
 | **9** | Preset-System + Factory-Presets | ☐ |
 
@@ -266,3 +266,32 @@ zuschaltbar).
 
 > Default: alle vier Effekte **aus** → Klang identisch zu Phase 5.
 > Als Nächstes: Arpeggiator + Voice-Modi (Mono/Legato/Unison/Glide) (Phase 7).
+
+---
+
+## Phase 7 — Status
+
+Arpeggiator und Voice-Modi. **139 Parameter**. Die Notenverteilung wurde von
+`juce::Synthesiser` auf einen eigenen `VoiceManager` umgestellt (treibt die
+Stimmen direkt), während der Processor zwischen MIDI-Events segmentiert rendert
+— so bleiben Notenstarts **sample-genau**.
+
+- **Arpeggiator** ([Arpeggiator.h](Source/synth/Arpeggiator.h)): MIDI-Transform
+  vor den Stimmen. Modi **Up / Down / Up-Down / Random / As-Played**,
+  **Tempo-Sync-Rate** (1/4…1/32 inkl. Triolen), **Gate**, **Octave-Range** (1-4),
+  **Latch**. Nicht-Noten-Messages (CC etc.) laufen durch.
+- **Voice-Modi** ([VoiceManager.h](Source/synth/VoiceManager.h)):
+  - **Poly** (mit Voice-Stealing nach Alter),
+  - **Mono** (Last-Note-Priorität, Retrigger),
+  - **Legato** (wie Mono, aber überlappende Noten gleiten ohne Retrigger).
+- **Unison**: bis **7** verstimmte Stimmen pro Note (Detune-Spread, gleichmäßig
+  um die Mitte, Pegelkompensation 1/√n).
+- **Glide/Portamento** ([PikeVoice.h](Source/synth/PikeVoice.h)): per-Stimme
+  Ein-Pol-Gleiten der Grundfrequenz; greift in allen Modi (0 s = aus).
+- **Verifiziert**: Build VST3/AU/Standalone + `auval` „AU VALIDATION SUCCEEDED"
+  (139 Parameter, Render- und MIDI-Test über den neuen VoiceManager-Pfad
+  bestanden).
+
+> Default: Arp aus, Voice-Mode Poly, Unison 1, Glide 0 → Klang identisch zu
+> Phase 6. Behaviorales Feintuning (Mono/Legato/Unison/Arp-Groove) am besten im
+> DAW/Standalone gegenchecken. Als Nächstes: GUI ausbauen (Phase 8).

@@ -10,6 +10,8 @@
 
 #include <JuceHeader.h>
 #include "synth/PikeVoice.h"
+#include "synth/Arpeggiator.h"
+#include "synth/VoiceManager.h"
 #include "dsp/fx/FxChain.h"
 
 //==============================================================================
@@ -82,6 +84,13 @@ private:
     // Global post-mix effects.
     pike::FxChain fxChain;
     pike::FxChain::Params readFxParams() const;
+
+    // Arpeggiator + voice-mode dispatch.
+    pike::Arpeggiator arpeggiator;
+    pike::VoiceManager voiceManager;
+    juce::MidiBuffer   emptyMidi;
+    pike::Arpeggiator::Params readArpParams() const;
+    void renderVoices (juce::AudioBuffer<float>& buffer, const juce::MidiBuffer& midi);
 
     /** Caches the APVTS atomics the voices read each block. */
     void cacheParameterPointers();

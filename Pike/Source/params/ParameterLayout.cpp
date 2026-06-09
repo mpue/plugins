@@ -403,6 +403,49 @@ namespace pike
                 juce::AudioParameterFloatAttributes().withStringFromValueFunction (pctText)));
         }
 
+        //======================================================================
+        // Arpeggiator
+        {
+            auto pctText = [] (float v, int) { return juce::String (v * 100.0f, 0) + " %"; };
+
+            layout.add (std::make_unique<juce::AudioParameterBool> (
+                ID { pid::arpOn, pid::version }, "Arp On", false));
+            layout.add (std::make_unique<juce::AudioParameterChoice> (
+                ID { pid::arpMode, pid::version }, "Arp Mode",
+                juce::StringArray { "Up", "Down", "Up/Down", "Random", "As Played" }, 0));
+            layout.add (std::make_unique<juce::AudioParameterChoice> (
+                ID { pid::arpRate, pid::version }, "Arp Rate",
+                juce::StringArray { "1/4", "1/8", "1/8T", "1/16", "1/16T", "1/32" }, 3));
+            layout.add (std::make_unique<APF> (
+                ID { pid::arpGate, pid::version }, "Arp Gate",
+                Range (0.05f, 1.0f, 0.001f), 0.5f,
+                juce::AudioParameterFloatAttributes().withStringFromValueFunction (pctText)));
+            layout.add (std::make_unique<juce::AudioParameterInt> (
+                ID { pid::arpOctaves, pid::version }, "Arp Octaves", 1, 4, 1));
+            layout.add (std::make_unique<juce::AudioParameterBool> (
+                ID { pid::arpLatch, pid::version }, "Arp Latch", false));
+        }
+
+        //======================================================================
+        // Voice mode / unison / glide
+        {
+            layout.add (std::make_unique<juce::AudioParameterChoice> (
+                ID { pid::voiceMode, pid::version }, "Voice Mode",
+                juce::StringArray { "Poly", "Mono", "Legato" }, 0));
+            layout.add (std::make_unique<juce::AudioParameterInt> (
+                ID { pid::unisonCount, pid::version }, "Unison Voices", 1, 7, 1));
+            layout.add (std::make_unique<APF> (
+                ID { pid::unisonDetune, pid::version }, "Unison Detune",
+                Range (0.0f, 50.0f, 0.1f), 15.0f,
+                juce::AudioParameterFloatAttributes()
+                    .withLabel ("ct")
+                    .withStringFromValueFunction ([] (float v, int) { return juce::String (v, 1) + " ct"; })));
+            layout.add (std::make_unique<APF> (
+                ID { pid::glideTime, pid::version }, "Glide Time",
+                timeRange (0.0f, 2.0f, 0.1f), 0.0f,
+                juce::AudioParameterFloatAttributes().withStringFromValueFunction (secondsText)));
+        }
+
         return layout;
     }
 }

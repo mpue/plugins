@@ -93,6 +93,7 @@ void PikeAudioProcessor::cacheParameterPointers()
 
     voiceParameters.modWheel   = &modWheelShared;
     voiceParameters.aftertouch = &aftertouchShared;
+    voiceParameters.glideTime  = apvts.getRawParameterValue (pid::glideTime);
 
     for (int s = 0; s < pike::mod::numSlots; ++s)
     {
@@ -239,6 +240,10 @@ void PikeAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     for (int i = 0; i < synth.getNumVoices(); ++i)
         if (auto* voice = synth.getVoice (i))
             voice->setCurrentPlaybackSampleRate (sampleRate);
+
+    arpeggiator.prepare (sampleRate);
+    voiceManager.prepare (synth);
+    emptyMidi.ensureSize (16);
 }
 
 void PikeAudioProcessor::releaseResources()
@@ -280,9 +285,19 @@ void PikeAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     // render the active notes into the buffer.
     buffer.clear();
 
-    updateModulationRuntime (midiMessages, buffer.getNumSamples());
+    const int numSamples = buffer.getNumSamples();
 
-    synth.renderNextBlock (buffer, midiMessages, 0, buffer.getNumSamples());
+    // Tempo + MIDI mod sources (also sets currentBpm).
+    updateModulationRuntime (midiMessages, numSamples);
+
+    // Arpeggiator transforms the note stream (passes other messages through).
+    arpeggiator.process (midiMessages, readArpParams(), currentBpm, numSamples);
+
+    // Voice-mode dispatch + sample-accurate rendering.
+    voiceManager.setConfig ((int) apvts.getRawParameterValue (pid::voiceMode)->load(),
+                            (int) apvts.getRawParameterValue (pid::unisonCount)->load(),
+                            apvts.getRawParameterValue (pid::unisonDetune)->load());
+    renderVoices (buffer, midiMessages);
 
     // Global FX chain (Distortion -> Chorus -> Delay -> Reverb).
     fxChain.process (buffer, readFxParams(), currentBpm);
@@ -326,6 +341,46 @@ pike::FxChain::Params PikeAudioProcessor::readFxParams() const
     p.reverbMix     = val (pid::reverbMix);
 
     return p;
+}
+
+pike::Arpeggiator::Params PikeAudioProcessor::readArpParams() const
+{
+    pike::Arpeggiator::Params p;
+    p.enabled = apvts.getRawParameterValue (pid::arpOn)->load()    > 0.5f;
+    p.mode    = (int) apvts.getRawParameterValue (pid::arpMode)->load();
+    p.rateDiv = (int) apvts.getRawParameterValue (pid::arpRate)->load();
+    p.gate    = apvts.getRawParameterValue (pid::arpGate)->load();
+    p.octaves = (int) apvts.getRawParameterValue (pid::arpOctaves)->load();
+    p.latch   = apvts.getRawParameterValue (pid::arpLatch)->load()  > 0.5f;
+    return p;
+}
+
+void PikeAudioProcessor::renderVoices (juce::AudioBuffer<float>& buffer, const juce::MidiBuffer& midi)
+{
+    // Drive the VoiceManager from MIDI events, rendering the synth in segments
+    // between events so note starts/stops are sample-accurate.
+    const int numSamples = buffer.getNumSamples();
+    int lastPos = 0;
+
+    for (const auto meta : midi)
+    {
+        const int pos = juce::jlimit (0, numSamples, meta.samplePosition);
+
+        if (pos > lastPos)
+        {
+            synth.renderNextBlock (buffer, emptyMidi, lastPos, pos - lastPos);
+            lastPos = pos;
+        }
+
+        const auto m = meta.getMessage();
+        if (m.isNoteOn())
+            voiceManager.noteOn (m.getNoteNumber(), m.getFloatVelocity());
+        else if (m.isNoteOff())
+            voiceManager.noteOff (m.getNoteNumber());
+    }
+
+    if (lastPos < numSamples)
+        synth.renderNextBlock (buffer, emptyMidi, lastPos, numSamples - lastPos);
 }
 
 //==============================================================================

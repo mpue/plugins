@@ -54,6 +54,10 @@
               file="Source/synth/PikeSound.h"/>
         <FILE id="pkVoi01" name="PikeVoice.h" compile="0" resource="0"
               file="Source/synth/PikeVoice.h"/>
+        <FILE id="pkArp01" name="Arpeggiator.h" compile="0" resource="0"
+              file="Source/synth/Arpeggiator.h"/>
+        <FILE id="pkVm01" name="VoiceManager.h" compile="0" resource="0"
+              file="Source/synth/VoiceManager.h"/>
       </GROUP>
     </GROUP>
   </MAINGROUP>
