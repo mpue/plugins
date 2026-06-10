@@ -14,6 +14,7 @@
 #include "synth/VoiceManager.h"
 #include "dsp/fx/FxChain.h"
 #include "presets/PresetManager.h"
+#include "gui/VisualState.h"
 
 //==============================================================================
 /**
@@ -65,6 +66,9 @@ public:
     /** Preset handling (factory + user presets). */
     pike::PresetManager& getPresetManager() noexcept { return presetManager; }
 
+    /** Realtime-safe visualisation data for the editor's animations. */
+    pike::VisualState& getVisualState() noexcept { return visualState; }
+
     static constexpr int numVoices = 8;
 
 private:
@@ -96,6 +100,10 @@ private:
     juce::MidiBuffer   emptyMidi;
     pike::Arpeggiator::Params readArpParams() const;
     void renderVoices (juce::AudioBuffer<float>& buffer, const juce::MidiBuffer& midi);
+
+    // Visualisation data published to the editor.
+    pike::VisualState visualState;
+    int heldNoteCount = 0;
 
     /** Caches the APVTS atomics the voices read each block. */
     void cacheParameterPointers();

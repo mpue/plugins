@@ -306,6 +306,19 @@ void PikeAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     const float gainDb     = apvts.getRawParameterValue (pid::masterGain)->load();
     const float gainLinear = juce::Decibels::decibelsToGain (gainDb);
     buffer.applyGain (gainLinear);
+
+    // ----- publish visualisation data (realtime-safe) -----
+    const int   numCh = buffer.getNumChannels();
+    const float peakL = numCh > 0 ? buffer.getMagnitude (0, 0, numSamples) : 0.0f;
+    const float peakR = numCh > 1 ? buffer.getMagnitude (1, 0, numSamples) : peakL;
+    visualState.meterL.store (peakL, std::memory_order_relaxed);
+    visualState.meterR.store (peakR, std::memory_order_relaxed);
+
+    const float* L = numCh > 0 ? buffer.getReadPointer (0) : nullptr;
+    const float* R = numCh > 1 ? buffer.getReadPointer (1) : L;
+    if (L != nullptr)
+        for (int i = 0; i < numSamples; ++i)
+            visualState.pushScope (0.5f * (L[i] + R[i]));
 }
 
 pike::FxChain::Params PikeAudioProcessor::readFxParams() const
@@ -374,9 +387,18 @@ void PikeAudioProcessor::renderVoices (juce::AudioBuffer<float>& buffer, const j
 
         const auto m = meta.getMessage();
         if (m.isNoteOn())
+        {
             voiceManager.noteOn (m.getNoteNumber(), m.getFloatVelocity());
+            ++heldNoteCount;
+            visualState.triggerId.fetch_add (1, std::memory_order_relaxed);
+            visualState.gate.store (true, std::memory_order_relaxed);
+        }
         else if (m.isNoteOff())
+        {
             voiceManager.noteOff (m.getNoteNumber());
+            heldNoteCount = juce::jmax (0, heldNoteCount - 1);
+            visualState.gate.store (heldNoteCount > 0, std::memory_order_relaxed);
+        }
     }
 
     if (lastPos < numSamples)

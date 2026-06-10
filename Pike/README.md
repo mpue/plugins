@@ -354,3 +354,21 @@ Alle 9 Phasen sind umgesetzt: Pike ist ein vollständiger 8-stimmiger
 Hybrid-Synth (3 Osc + Wavetables, Multimode-Filter, 3 Envs, 2 LFOs, 16-Slot-
 Mod-Matrix, FX-Kette, Arpeggiator, Voice-Modi, komplette GUI, Presets) und
 baut/validiert als VST3, AU und Standalone.
+
+---
+
+## UI-Polish — Tiefe & lebende Eyecatcher
+
+Optische Aufwertung der GUI (realtime-sicher; der Audio-Thread veröffentlicht
+Daten über [VisualState.h](Source/gui/VisualState.h), die GUI pollt per Timer):
+
+- **Tiefe**: Panels mit Verlauf, Schlagschatten, Akzent-Tab am Titel und
+  Specular-Highlight; Tab-Hintergrund mit dezentem Verlauf statt Flatfill
+  ([PikeUI.h](Source/gui/PikeUI.h)).
+- **Pegelanzeige**: Stereo-Output-Meter mit Peak-Hold-Ballistik im Header.
+- **Oszilloskop**: Live-Wellenform des Ausgangs (mit Glow) im Header.
+- **Animierte Hüllkurven**: ADSR-Grafiken für Amp/Filter/Aux auf dem
+  *Filter / Env*-Tab mit gefüllter Kurve und einem **Playhead**, der beim
+  Spielen den Hüllkurvenverlauf abfährt (retriggert pro Note/Arp-Step)
+  ([Visualisers.h](Source/gui/Visualisers.h), [FilterEnvPage.h](Source/gui/FilterEnvPage.h)).
+- Meter/Scope/Envelopes animieren live, sobald MIDI-Noten gespielt werden.

@@ -15,7 +15,7 @@ using namespace pike::gui;
 
 namespace
 {
-    constexpr int kHeaderHeight = 52;
+    constexpr int kHeaderHeight = 64;
 
     CtrlSpec K (juce::String id, juce::String name) { return { CtrlType::Knob,   std::move (id), std::move (name) }; }
     CtrlSpec C (juce::String id, juce::String name) { return { CtrlType::Combo,  std::move (id), std::move (name) }; }
@@ -44,26 +44,6 @@ namespace
                          K (pid::ringModLevel, "Ring 1x2"),
                          K (pid::noiseLevel,   "Noise") } });
         return g;
-    }
-
-    std::vector<GroupSpec> filterEnvPage()
-    {
-        return {
-            { "Filter",
-              { C (pid::filterType,      "Type"),
-                C (pid::filterSlope,     "Slope"),
-                K (pid::filterCutoff,    "Cutoff"),
-                K (pid::filterResonance, "Reso"),
-                K (pid::filterKeyTrack,  "Key Trk"),
-                K (pid::filterDrive,     "Drive"),
-                K (pid::filterEnvAmount, "Env Amt") } },
-            { "Amp Env",
-              { K (pid::ampAttack, "A"), K (pid::ampDecay, "D"), K (pid::ampSustain, "S"), K (pid::ampRelease, "R") } },
-            { "Filter Env",
-              { K (pid::filtAttack, "A"), K (pid::filtDecay, "D"), K (pid::filtSustain, "S"), K (pid::filtRelease, "R") } },
-            { "Aux Env",
-              { K (pid::auxAttack, "A"), K (pid::auxDecay, "D"), K (pid::auxSustain, "S"), K (pid::auxRelease, "R") } },
-        };
     }
 
     std::vector<GroupSpec> modPage()
@@ -129,10 +109,23 @@ PikeAudioProcessorEditor::PikeAudioProcessorEditor (PikeAudioProcessor& p)
     addAndMakeVisible (tabs);
 
     addPage ("Oscillators",  oscPage());
-    addPage ("Filter / Env", filterEnvPage());
+
+    // Bespoke Filter/Env page with animated envelope displays.
+    {
+        auto* vp = new PageViewport (new FilterEnvPage (audioProcessor.getValueTreeState(),
+                                                        audioProcessor.getVisualState()));
+        tabs.addTab ("Filter / Env", juce::Colour (0xff1a1a1a), vp, true);
+    }
+
     addPage ("Mod",          modPage());
     addPage ("FX",           fxPage());
     addPage ("Arp / Voice",  arpVoicePage());
+
+    // Header eyecatchers.
+    scope = std::make_unique<pike::gui::Oscilloscope> (audioProcessor.getVisualState());
+    meter = std::make_unique<pike::gui::LevelMeter>   (audioProcessor.getVisualState());
+    addAndMakeVisible (*scope);
+    addAndMakeVisible (*meter);
 
     // Preset bar.
     addAndMakeVisible (presetBox);
@@ -271,25 +264,31 @@ void PikeAudioProcessorEditor::paint (juce::Graphics& g)
     g.setColour (juce::Colour (0xff4d9eff).withAlpha (0.7f));
     g.drawLine (header.getX(), header.getBottom() - 1.0f, header.getRight(), header.getBottom() - 1.0f, 2.0f);
 
-    auto text = header.reduced (16.0f, 0.0f);
+    auto text = header.reduced (16.0f, 0.0f).withWidth (220.0f);
     g.setColour (juce::Colours::white);
     g.setFont (juce::Font (26.0f, juce::Font::bold));
-    g.drawText ("PIKE", text.removeFromLeft (100.0f), juce::Justification::centredLeft, false);
+    g.drawText ("PIKE", text.removeFromLeft (96.0f), juce::Justification::centredLeft, false);
 
-    g.setColour (juce::Colour (0xff888888));
-    g.setFont (juce::Font (12.0f));
-    g.drawText ("Polyphonic Hybrid Synthesizer", text, juce::Justification::centredLeft, false);
-
+    g.setColour (juce::Colour (0xff8a93a6));
+    g.setFont (juce::Font (11.0f));
+    g.drawText ("Polyphonic Hybrid", text.removeFromTop (header.getHeight() * 0.5f).reduced (0, 6),
+                juce::Justification::bottomLeft, false);
     g.setColour (juce::Colour (0xff4d9eff));
-    g.setFont (juce::Font (12.0f, juce::Font::bold));
-    g.drawText ("v" JucePlugin_VersionString, header.reduced (16.0f, 0.0f),
-                juce::Justification::centredRight, false);
+    g.setFont (juce::Font (10.0f, juce::Font::bold));
+    g.drawText ("Synthesizer  v" JucePlugin_VersionString, text,
+                juce::Justification::topLeft, false);
 }
 
 void PikeAudioProcessorEditor::resized()
 {
     auto area = getLocalBounds();
-    area.removeFromTop (kHeaderHeight);
+
+    // Header eyecatchers: scope fills the middle, meter sits at the right.
+    auto header = area.removeFromTop (kHeaderHeight).reduced (12, 10);
+    header.removeFromLeft (236);                 // logo text area
+    if (meter != nullptr) meter->setBounds (header.removeFromRight (42));
+    header.removeFromRight (10);
+    if (scope != nullptr) scope->setBounds (header);
 
     // Preset bar.
     auto bar = area.removeFromTop (34).reduced (8, 4);

@@ -145,16 +145,39 @@ namespace pike::gui
 
         void paint (juce::Graphics& g) override
         {
-            auto b = getLocalBounds().toFloat().reduced (0.5f);
-            g.setColour (juce::Colour (0xff222222));
-            g.fillRoundedRectangle (b, 6.0f);
-            g.setColour (juce::Colour (0xff404040));
-            g.drawRoundedRectangle (b, 6.0f, 1.0f);
+            const juce::Colour accent { 0xff4d9eff };
+            auto b = getLocalBounds().toFloat().reduced (2.0f);
 
-            g.setColour (juce::Colour (0xff4d9eff));
+            // Drop shadow for depth.
+            {
+                juce::DropShadow ds (juce::Colours::black.withAlpha (0.55f), 8, { 0, 2 });
+                juce::Path p;
+                p.addRoundedRectangle (b, 7.0f);
+                ds.drawForPath (g, p);
+            }
+
+            // Body gradient (raised look).
+            juce::ColourGradient body (juce::Colour (0xff2b3038), b.getX(), b.getY(),
+                                       juce::Colour (0xff181b21), b.getX(), b.getBottom(), false);
+            g.setGradientFill (body);
+            g.fillRoundedRectangle (b, 7.0f);
+
+            // Specular top highlight + border.
+            g.setColour (juce::Colours::white.withAlpha (0.06f));
+            g.drawLine (b.getX() + 7.0f, b.getY() + 1.0f, b.getRight() - 7.0f, b.getY() + 1.0f, 1.0f);
+            g.setColour (juce::Colour (0xff3b414c));
+            g.drawRoundedRectangle (b, 7.0f, 1.0f);
+
+            // Title with accent tab + underline.
+            auto titleBar = b.removeFromTop ((float) layout::titleH);
+            g.setColour (accent);
+            g.fillRoundedRectangle (titleBar.getX() + 8.0f, titleBar.getY() + 6.0f,
+                                    3.0f, titleBar.getHeight() - 9.0f, 1.5f);
             g.setFont (juce::Font (13.0f, juce::Font::bold));
-            g.drawText (title, getLocalBounds().removeFromTop (layout::titleH).reduced (10, 0),
+            g.drawText (title, titleBar.withTrimmedLeft (16).withTrimmedRight (8),
                         juce::Justification::centredLeft, false);
+            g.setColour (accent.withAlpha (0.22f));
+            g.drawLine (b.getX() + 10.0f, titleBar.getBottom(), b.getRight() - 10.0f, titleBar.getBottom(), 1.0f);
         }
 
         void resized() override
@@ -181,7 +204,15 @@ namespace pike::gui
     };
 
     //==============================================================================
-    class Page : public juce::Component
+    /** Base for components hosted in a PageViewport: reports content height for
+        a given width so the viewport can size and scroll them. */
+    struct ScrollPage : public juce::Component
+    {
+        virtual int layoutForWidth (int width) = 0;
+    };
+
+    //==============================================================================
+    class Page : public ScrollPage
     {
     public:
         Page (juce::AudioProcessorValueTreeState& state, const std::vector<GroupSpec>& specs)
@@ -194,7 +225,7 @@ namespace pike::gui
         }
 
         /** Flows groups within the given width; returns the total content height. */
-        int layoutForWidth (int width)
+        int layoutForWidth (int width) override
         {
             const int pad = layout::pad;
             int x = pad, y = pad, rowHeight = 0;
@@ -219,6 +250,14 @@ namespace pike::gui
             return y + rowHeight + pad;
         }
 
+        void paint (juce::Graphics& g) override
+        {
+            juce::ColourGradient bg (juce::Colour (0xff21242b), 0.0f, 0.0f,
+                                     juce::Colour (0xff141619), 0.0f, (float) getHeight(), false);
+            g.setGradientFill (bg);
+            g.fillAll();
+        }
+
         void resized() override
         {
             layoutForWidth (getWidth());
@@ -235,7 +274,7 @@ namespace pike::gui
     class PageViewport : public juce::Viewport
     {
     public:
-        explicit PageViewport (Page* pageToOwn)
+        explicit PageViewport (ScrollPage* pageToOwn)
         {
             setViewedComponent (pageToOwn, true);   // takes ownership
             setScrollBarsShown (true, false);
@@ -245,7 +284,7 @@ namespace pike::gui
         {
             juce::Viewport::resized();
 
-            if (auto* p = dynamic_cast<Page*> (getViewedComponent()))
+            if (auto* p = dynamic_cast<ScrollPage*> (getViewedComponent()))
             {
                 const int w = getMaximumVisibleWidth();
                 const int h = p->layoutForWidth (w);
