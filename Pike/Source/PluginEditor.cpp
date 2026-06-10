@@ -134,6 +134,19 @@ PikeAudioProcessorEditor::PikeAudioProcessorEditor (PikeAudioProcessor& p)
     addPage ("FX",           fxPage());
     addPage ("Arp / Voice",  arpVoicePage());
 
+    // Preset bar.
+    addAndMakeVisible (presetBox);
+    presetBox.setJustificationType (juce::Justification::centred);
+    presetBox.onChange = [this] { loadPresetAtComboId (presetBox.getSelectedId()); };
+
+    for (auto* b : { &prevButton, &nextButton, &saveButton })
+        addAndMakeVisible (*b);
+    prevButton.onClick = [this] { stepPreset (-1); };
+    nextButton.onClick = [this] { stepPreset (+1); };
+    saveButton.onClick = [this] { showSaveDialog(); };
+
+    refreshPresets();
+
     setResizable (true, true);
     setResizeLimits (820, 480, 2400, 1500);
     setSize (1180, 720);
@@ -148,6 +161,100 @@ void PikeAudioProcessorEditor::addPage (const juce::String& name, const std::vec
 {
     auto* viewport = new PageViewport (new Page (audioProcessor.getValueTreeState(), specs));
     tabs.addTab (name, juce::Colour (0xff1a1a1a), viewport, true);
+}
+
+//==============================================================================
+void PikeAudioProcessorEditor::refreshPresets()
+{
+    auto& pm = audioProcessor.getPresetManager();
+
+    presetBox.clear (juce::dontSendNotification);
+    presetItems.clear();
+
+    int id = 1;
+    auto factoryNames = pm.getFactoryNames();
+    if (! factoryNames.isEmpty())
+    {
+        presetBox.addSectionHeading ("Factory");
+        for (const auto& n : factoryNames)
+        {
+            presetItems.push_back ({ true, n });
+            presetBox.addItem (n, id++);
+        }
+    }
+
+    auto userNames = pm.getUserNames();
+    if (! userNames.isEmpty())
+    {
+        presetBox.addSectionHeading ("User");
+        for (const auto& n : userNames)
+        {
+            presetItems.push_back ({ false, n });
+            presetBox.addItem (n, id++);
+        }
+    }
+
+    // Reflect the currently-loaded preset name if we can find it.
+    const auto current = pm.getCurrentName();
+    for (size_t i = 0; i < presetItems.size(); ++i)
+        if (presetItems[i].name == current)
+        {
+            presetBox.setSelectedId ((int) i + 1, juce::dontSendNotification);
+            break;
+        }
+}
+
+void PikeAudioProcessorEditor::loadPresetAtComboId (int comboId)
+{
+    const int idx = comboId - 1;
+    if (! juce::isPositiveAndBelow (idx, (int) presetItems.size()))
+        return;
+
+    auto& pm = audioProcessor.getPresetManager();
+    if (presetItems[(size_t) idx].factory)
+        pm.loadFactoryByName (presetItems[(size_t) idx].name);
+    else
+        pm.loadUser (presetItems[(size_t) idx].name);
+}
+
+void PikeAudioProcessorEditor::stepPreset (int direction)
+{
+    if (presetItems.empty())
+        return;
+
+    int idx = presetBox.getSelectedId() - 1;
+    if (idx < 0) idx = 0;
+    idx = (idx + direction + (int) presetItems.size()) % (int) presetItems.size();
+
+    presetBox.setSelectedId (idx + 1);   // triggers onChange -> load
+}
+
+void PikeAudioProcessorEditor::showSaveDialog()
+{
+    saveDialog = std::make_unique<juce::AlertWindow> (
+        "Save Preset", "Enter a name for the preset:", juce::MessageBoxIconType::NoIcon);
+
+    saveDialog->addTextEditor ("name", audioProcessor.getPresetManager().getCurrentName());
+    saveDialog->addButton ("Save",   1, juce::KeyPress (juce::KeyPress::returnKey));
+    saveDialog->addButton ("Cancel", 0, juce::KeyPress (juce::KeyPress::escapeKey));
+
+    saveDialog->enterModalState (true, juce::ModalCallbackFunction::create (
+        [this] (int result)
+        {
+            if (result == 1)
+            {
+                const auto name = saveDialog->getTextEditorContents ("name");
+                const auto saved = audioProcessor.getPresetManager().savePreset (name);
+                refreshPresets();
+                for (size_t i = 0; i < presetItems.size(); ++i)
+                    if (! presetItems[i].factory && presetItems[i].name == saved)
+                    {
+                        presetBox.setSelectedId ((int) i + 1, juce::dontSendNotification);
+                        break;
+                    }
+            }
+            saveDialog.reset();
+        }), false);
 }
 
 //==============================================================================
@@ -183,5 +290,15 @@ void PikeAudioProcessorEditor::resized()
 {
     auto area = getLocalBounds();
     area.removeFromTop (kHeaderHeight);
+
+    // Preset bar.
+    auto bar = area.removeFromTop (34).reduced (8, 4);
+    saveButton.setBounds (bar.removeFromRight (70));
+    bar.removeFromRight (6);
+    nextButton.setBounds (bar.removeFromRight (32));
+    prevButton.setBounds (bar.removeFromRight (32));
+    bar.removeFromRight (6);
+    presetBox.setBounds (bar.removeFromLeft (juce::jmin (340, bar.getWidth())));
+
     tabs.setBounds (area);
 }

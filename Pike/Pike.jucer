@@ -23,6 +23,12 @@
         <FILE id="pkUi01" name="PikeUI.h" compile="0" resource="0"
               file="Source/gui/PikeUI.h"/>
       </GROUP>
+      <GROUP id="pkPre1" name="presets">
+        <FILE id="pkFac01" name="FactoryPresets.h" compile="0" resource="0"
+              file="Source/presets/FactoryPresets.h"/>
+        <FILE id="pkPm01" name="PresetManager.h" compile="0" resource="0"
+              file="Source/presets/PresetManager.h"/>
+      </GROUP>
       <GROUP id="pkParams1" name="params">
         <FILE id="pkPid01" name="ParameterIDs.h" compile="0" resource="0"
               file="Source/params/ParameterIDs.h"/>

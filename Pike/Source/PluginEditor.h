@@ -28,8 +28,20 @@ public:
 private:
     void addPage (const juce::String& name, const std::vector<pike::gui::GroupSpec>& specs);
 
+    void refreshPresets();
+    void loadPresetAtComboId (int comboId);
+    void stepPreset (int direction);
+    void showSaveDialog();
+
     PikeAudioProcessor& audioProcessor;
     ElegantDarkLookAndFeel lookAndFeel;
+
+    // Preset bar.
+    juce::ComboBox  presetBox;
+    juce::TextButton prevButton { "<" }, nextButton { ">" }, saveButton { "Save" };
+    struct PresetItem { bool factory; juce::String name; };
+    std::vector<PresetItem> presetItems;
+    std::unique_ptr<juce::AlertWindow> saveDialog;
 
     juce::TabbedComponent tabs { juce::TabbedButtonBar::TabsAtTop };
 

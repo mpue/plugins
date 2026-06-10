@@ -110,7 +110,7 @@ gewartet.
 | **6** | FX-Kette (Distortion, Chorus, Delay, Reverb) | ✅ |
 | **7** | Arpeggiator + Voice-Modi (Mono/Legato/Unison/Glide) | ✅ |
 | **8** | GUI ausbauen, alle Parameter anbinden | ✅ |
-| **9** | Preset-System + Factory-Presets | ☐ |
+| **9** | Preset-System + Factory-Presets | ✅ |
 
 ---
 
@@ -320,3 +320,37 @@ gegliederten, scrollbaren Tab-Seiten, mit dem `ElegantDarkLookAndFeel`.
   (Defaults korrekt, Knöpfe/Combos/Toggles korrekt gebunden und beschriftet).
 
 > Als Nächstes: Preset-System + Factory-Presets (Phase 9).
+
+---
+
+## Phase 9 — Status
+
+Preset-System mit Browser im UI und Factory-Presets.
+
+- **PresetManager** ([PresetManager.h](Source/presets/PresetManager.h)):
+  - **Factory-Presets** als Parameter-Overrides im Code
+    ([FactoryPresets.h](Source/presets/FactoryPresets.h)) — beim Laden werden
+    erst alle Parameter auf Default gesetzt, dann die Overrides angewandt
+    (immer verfügbar, kein Install-Schritt).
+  - **User-Presets** als XML-Snapshots der APVTS unter
+    `~/Documents/Pike/Presets/*.pikepreset`.
+- **10 Factory-Presets**: Init, Classic Poly, Fat Unison Lead, FM Bell,
+  Wavetable Pad, Acid Bass, Sync Lead, Arp Pluck, Ambient Keys, Ring Stab.
+- **Preset-Browser** ([PluginEditor](Source/PluginEditor.cpp)): ComboBox mit
+  *Factory*/*User*-Sektionen, Prev/Next-Buttons und *Save* (Dialog für den
+  Namen). Auswahl lädt sofort und aktualisiert die gesamte GUI über die
+  APVTS-Attachments.
+- DAW-Session-State läuft weiterhin über `get/setStateInformation` (APVTS-XML).
+- **Verifiziert**: Build VST3/AU/Standalone, `auval` „AU VALIDATION SUCCEEDED",
+  und **live im Standalone**: Factory-Preset *Acid Bass* geladen (alle Tabs
+  korrekt aktualisiert), User-Preset gespeichert (XML auf Platte) und im
+  Browser unter *User* erschienen.
+
+---
+
+## Fertig 🎉
+
+Alle 9 Phasen sind umgesetzt: Pike ist ein vollständiger 8-stimmiger
+Hybrid-Synth (3 Osc + Wavetables, Multimode-Filter, 3 Envs, 2 LFOs, 16-Slot-
+Mod-Matrix, FX-Kette, Arpeggiator, Voice-Modi, komplette GUI, Presets) und
+baut/validiert als VST3, AU und Standalone.

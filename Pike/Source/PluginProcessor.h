@@ -13,6 +13,7 @@
 #include "synth/Arpeggiator.h"
 #include "synth/VoiceManager.h"
 #include "dsp/fx/FxChain.h"
+#include "presets/PresetManager.h"
 
 //==============================================================================
 /**
@@ -61,11 +62,15 @@ public:
     /** The plugin's parameter tree. The editor binds its controls to this. */
     juce::AudioProcessorValueTreeState& getValueTreeState() noexcept { return apvts; }
 
+    /** Preset handling (factory + user presets). */
+    pike::PresetManager& getPresetManager() noexcept { return presetManager; }
+
     static constexpr int numVoices = 8;
 
 private:
     //==============================================================================
     juce::AudioProcessorValueTreeState apvts;
+    pike::PresetManager presetManager { *this, apvts };
 
     juce::Synthesiser synth;
     pike::PikeVoice::Parameters voiceParameters;
