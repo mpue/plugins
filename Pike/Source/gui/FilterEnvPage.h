@@ -84,8 +84,8 @@ namespace pike::gui
 
         void paint (juce::Graphics& g) override
         {
-            juce::ColourGradient bg (juce::Colour (0xff2a313c), 0.0f, 0.0f,
-                                     juce::Colour (0xff141820), 0.0f, (float) getHeight(), false);
+            juce::ColourGradient bg (juce::Colour (0xff1e242e), 0.0f, 0.0f,
+                                     juce::Colour (0xff0b0e13), 0.0f, (float) getHeight(), false);
             g.setGradientFill (bg);
             g.fillAll();
 

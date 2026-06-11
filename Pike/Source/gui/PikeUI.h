@@ -166,7 +166,7 @@ namespace pike::gui
             auto b = getLocalBounds().toFloat().reduced (2.5f);
 
             // Glossy glass panel (the parent draws the drop shadow behind us).
-            fillGlassPanel (g, b, 8.0f);
+            fillGlassPanel (g, b, 5.0f);
 
             // Title with accent tab + underline.
             auto titleBar = b.removeFromTop ((float) layout::titleH);
@@ -252,8 +252,8 @@ namespace pike::gui
 
         void paint (juce::Graphics& g) override
         {
-            juce::ColourGradient bg (juce::Colour (0xff2a313c), 0.0f, 0.0f,
-                                     juce::Colour (0xff141820), 0.0f, (float) getHeight(), false);
+            juce::ColourGradient bg (juce::Colour (0xff1e242e), 0.0f, 0.0f,
+                                     juce::Colour (0xff0b0e13), 0.0f, (float) getHeight(), false);
             g.setGradientFill (bg);
             g.fillAll();
 
