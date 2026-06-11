@@ -90,8 +90,12 @@ PikeContent::PikeContent (PikeAudioProcessor& p) : audioProcessor (p)
     addAndMakeVisible (*scope);
     addAndMakeVisible (*meter);
 
-    // Right-click MIDI-Learn on every parameter widget.
-    installMidiLearn (*this);
+    // Right-click MIDI-Learn on every parameter widget. Walk each tab's content
+    // explicitly: TabbedComponent only parents the *visible* tab, so a recursive
+    // walk from `this` would miss the controls on the other tabs.
+    for (int i = 0; i < tabs.getNumTabs(); ++i)
+        if (auto* tc = tabs.getTabContentComponent (i))
+            installMidiLearn (*tc);
 }
 
 //==============================================================================
