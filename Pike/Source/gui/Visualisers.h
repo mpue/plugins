@@ -28,7 +28,7 @@ namespace pike::gui
     /** Dark glass background for plot panels (keeps the plot area readable). */
     inline void fillGlassPlot (juce::Graphics& g, juce::Rectangle<float> b, float corner)
     {
-        fillGlassPanel (g, b, corner, juce::Colour (0xff303849), juce::Colour (0xff0b0e13), 0.12f);
+        fillGlassPanel (g, b, corner, juce::Colour (0xff222833), juce::Colour (0xff090c11), 0.10f);
     }
 
     //==============================================================================

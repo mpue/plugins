@@ -257,20 +257,19 @@ void PikeAudioProcessorEditor::paint (juce::Graphics& g)
     g.fillAll (juce::Colour (0xff1a1a1a));
 
     auto header = getLocalBounds().removeFromTop (kHeaderHeight).toFloat();
-    juce::ColourGradient grad (juce::Colour (0xff2c3340), header.getX(), header.getY(),
-                               juce::Colour (0xff141821), header.getX(), header.getBottom(), false);
+    juce::ColourGradient grad (juce::Colour (0xff232a35), header.getX(), header.getY(),
+                               juce::Colour (0xff0d1117), header.getX(), header.getBottom(), false);
     g.setGradientFill (grad);
     g.fillRect (header);
 
-    // Glossy sheen over the top half of the header.
-    auto sheen = header.withHeight (header.getHeight() * 0.5f);
-    juce::ColourGradient gloss (juce::Colours::white.withAlpha (0.10f), sheen.getX(), sheen.getY(),
-                                juce::Colours::white.withAlpha (0.0f),  sheen.getX(), sheen.getBottom(), false);
+    // Thin polished glint along the top edge only.
+    auto glint = header.withHeight (5.0f);
+    juce::ColourGradient gloss (juce::Colours::white.withAlpha (0.10f), glint.getX(), glint.getY(),
+                                juce::Colours::white.withAlpha (0.0f),  glint.getX(), glint.getBottom(), false);
     g.setGradientFill (gloss);
-    g.fillRect (sheen);
+    g.fillRect (glint);
 
-    // Bright top line + accent bottom line.
-    g.setColour (juce::Colours::white.withAlpha (0.12f));
+    g.setColour (juce::Colours::white.withAlpha (0.35f));
     g.drawLine (header.getX(), header.getY() + 0.5f, header.getRight(), header.getY() + 0.5f, 1.0f);
     g.setColour (juce::Colour (0xff4d9eff).withAlpha (0.7f));
     g.drawLine (header.getX(), header.getBottom() - 1.0f, header.getRight(), header.getBottom() - 1.0f, 2.0f);
