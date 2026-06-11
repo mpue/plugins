@@ -406,3 +406,17 @@ Einheitlicher, glänzender Glas-Look über einen gemeinsamen Painter
   Glas-Variante** (schwacher Sheen), damit die Kurven gut lesbar bleiben.
 - Header mit Glanz-Sheen und heller Oberkante; Seiten-Hintergründe mit etwas
   bläulicherem Verlauf für mehr Tiefe.
+
+### Feste Aufteilung + affine Skalierung (Lupo-Stil)
+
+- Das gesamte UI liegt jetzt in einer **fest dimensionierten Inhalts-Komponente**
+  (`PikeContent`, 1100×720) und wird beim Fenster-Resize **als Ganzes per
+  `AffineTransform` skaliert** (Seitenverhältnis fixiert) — kein Reflow, kein
+  Scrollen, alles skaliert proportional.
+- **Mod-Tab kompakt** ([ModPage.h](Source/gui/ModPage.h)): die **16 Mod-Slots**
+  liegen als enge Zeilen in **2 Spalten × 8 Zeilen** (Source/Destination-Combos
+  + kleiner Depth-Regler mit Wert-Popup) — komplett sichtbar ohne Scrollen,
+  darüber LFO 1/2.
+- **Master Gain** sitzt jetzt oben rechts im *Oscillators*-Tab.
+- **Glow** auf den bewegten Envelope-Playheads (weicher radialer Schein +
+  heller Kern).

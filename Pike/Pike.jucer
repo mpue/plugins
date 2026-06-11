@@ -30,6 +30,8 @@
               file="Source/gui/Visualisers.h"/>
         <FILE id="pkVis03" name="FilterEnvPage.h" compile="0" resource="0"
               file="Source/gui/FilterEnvPage.h"/>
+        <FILE id="pkMod01" name="ModPage.h" compile="0" resource="0"
+              file="Source/gui/ModPage.h"/>
       </GROUP>
       <GROUP id="pkPre1" name="presets">
         <FILE id="pkFac01" name="FactoryPresets.h" compile="0" resource="0"

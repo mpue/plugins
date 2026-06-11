@@ -15,7 +15,8 @@ using namespace pike::gui;
 
 namespace
 {
-    constexpr int kHeaderHeight = 64;
+    constexpr int kHeaderHeight = 52;
+    constexpr int kPresetHeight = 34;
 
     CtrlSpec K (juce::String id, juce::String name) { return { CtrlType::Knob,   std::move (id), std::move (name) }; }
     CtrlSpec C (juce::String id, juce::String name) { return { CtrlType::Combo,  std::move (id), std::move (name) }; }
@@ -25,9 +26,9 @@ namespace
     std::vector<GroupSpec> oscPage()
     {
         std::vector<GroupSpec> g;
-        g.push_back ({ "Master", { K (pid::masterGain, "Gain") } });
 
-        for (int n = 0; n < 3; ++n)
+        // Osc 1, Osc 2, then Master (top-right), then Osc 3 + Routing.
+        for (int n = 0; n < 2; ++n)
             g.push_back ({ "Osc " + juce::String (n + 1),
                            { C (pid::oscWave[n],   "Wave"),
                              K (pid::oscOctave[n], "Oct"),
@@ -37,33 +38,23 @@ namespace
                              K (pid::oscPW[n],     "PW"),
                              K (pid::oscWtPos[n],  "WT Pos") } });
 
+        g.push_back ({ "Master", { K (pid::masterGain, "Gain") } });
+
+        g.push_back ({ "Osc 3",
+                       { C (pid::oscWave[2],   "Wave"),
+                         K (pid::oscOctave[2], "Oct"),
+                         K (pid::oscSemi[2],   "Semi"),
+                         K (pid::oscFine[2],   "Fine"),
+                         K (pid::oscLevel[2],  "Level"),
+                         K (pid::oscPW[2],     "PW"),
+                         K (pid::oscWtPos[2],  "WT Pos") } });
+
         g.push_back ({ "Routing / Mixer",
                        { T (pid::osc2Sync,     "Sync 2"),
                          T (pid::osc3Sync,     "Sync 3"),
                          K (pid::fmAmount,     "FM 3>1"),
                          K (pid::ringModLevel, "Ring 1x2"),
                          K (pid::noiseLevel,   "Noise") } });
-        return g;
-    }
-
-    std::vector<GroupSpec> modPage()
-    {
-        std::vector<GroupSpec> g;
-        for (int n = 0; n < 2; ++n)
-            g.push_back ({ "LFO " + juce::String (n + 1),
-                           { C (pid::lfoShape[n],   "Shape"),
-                             T (pid::lfoSync[n],    "Sync"),
-                             K (pid::lfoRate[n],    "Rate"),
-                             C (pid::lfoDiv[n],     "Div"),
-                             T (pid::lfoKeySync[n], "Key Sync"),
-                             T (pid::lfoMono[n],    "Mono"),
-                             K (pid::lfoFade[n],    "Fade") } });
-
-        for (int s = 0; s < pike::mod::numSlots; ++s)
-            g.push_back ({ "Mod " + juce::String (s + 1),
-                           { C (pid::modSourceId (s), "Src"),
-                             C (pid::modDestId (s),   "Dst"),
-                             K (pid::modDepthId (s),  "Depth") } });
         return g;
     }
 
@@ -100,33 +91,20 @@ namespace
 }
 
 //==============================================================================
-PikeAudioProcessorEditor::PikeAudioProcessorEditor (PikeAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p)
+PikeContent::PikeContent (PikeAudioProcessor& p) : audioProcessor (p)
 {
-    setLookAndFeel (&lookAndFeel);
+    auto& apvts = audioProcessor.getValueTreeState();
 
     tabs.setOutline (0);
     tabs.setTabBarDepth (28);
     addAndMakeVisible (tabs);
 
-    addPage ("Oscillators",  oscPage());
-
-    // Bespoke Filter/Env page with animated envelope displays.
-    {
-        auto* vp = new PageViewport (new FilterEnvPage (audioProcessor.getValueTreeState(),
-                                                        audioProcessor.getVisualState()));
-        tabs.addTab ("Filter / Env", juce::Colour (0xff1a1a1a), vp, true);
-    }
-
-    addPage ("Mod",          modPage());
-    addPage ("FX",           fxPage());
-    addPage ("Arp / Voice",  arpVoicePage());
-
-    // Header eyecatchers.
-    scope = std::make_unique<pike::gui::Oscilloscope> (audioProcessor.getVisualState());
-    meter = std::make_unique<pike::gui::LevelMeter>   (audioProcessor.getVisualState());
-    addAndMakeVisible (*scope);
-    addAndMakeVisible (*meter);
+    const auto tabColour = juce::Colour (0xff141820);
+    tabs.addTab ("Oscillators",  tabColour, new Page (apvts, oscPage()),                                       true);
+    tabs.addTab ("Filter / Env", tabColour, new FilterEnvPage (apvts, audioProcessor.getVisualState()),        true);
+    tabs.addTab ("Mod",          tabColour, new ModPage (apvts),                                               true);
+    tabs.addTab ("FX",           tabColour, new Page (apvts, fxPage()),                                        true);
+    tabs.addTab ("Arp / Voice",  tabColour, new Page (apvts, arpVoicePage()),                                  true);
 
     // Preset bar.
     addAndMakeVisible (presetBox);
@@ -138,30 +116,19 @@ PikeAudioProcessorEditor::PikeAudioProcessorEditor (PikeAudioProcessor& p)
     prevButton.onClick = [this] { stepPreset (-1); };
     nextButton.onClick = [this] { stepPreset (+1); };
     saveButton.onClick = [this] { showSaveDialog(); };
-
     refreshPresets();
 
-    setResizable (true, true);
-    setResizeLimits (820, 480, 2400, 1500);
-    setSize (1180, 720);
-}
-
-PikeAudioProcessorEditor::~PikeAudioProcessorEditor()
-{
-    setLookAndFeel (nullptr);
-}
-
-void PikeAudioProcessorEditor::addPage (const juce::String& name, const std::vector<GroupSpec>& specs)
-{
-    auto* viewport = new PageViewport (new Page (audioProcessor.getValueTreeState(), specs));
-    tabs.addTab (name, juce::Colour (0xff1a1a1a), viewport, true);
+    // Header eyecatchers.
+    scope = std::make_unique<Oscilloscope> (audioProcessor.getVisualState());
+    meter = std::make_unique<LevelMeter>   (audioProcessor.getVisualState());
+    addAndMakeVisible (*scope);
+    addAndMakeVisible (*meter);
 }
 
 //==============================================================================
-void PikeAudioProcessorEditor::refreshPresets()
+void PikeContent::refreshPresets()
 {
     auto& pm = audioProcessor.getPresetManager();
-
     presetBox.clear (juce::dontSendNotification);
     presetItems.clear();
 
@@ -170,25 +137,15 @@ void PikeAudioProcessorEditor::refreshPresets()
     if (! factoryNames.isEmpty())
     {
         presetBox.addSectionHeading ("Factory");
-        for (const auto& n : factoryNames)
-        {
-            presetItems.push_back ({ true, n });
-            presetBox.addItem (n, id++);
-        }
+        for (const auto& n : factoryNames) { presetItems.push_back ({ true, n });  presetBox.addItem (n, id++); }
     }
-
     auto userNames = pm.getUserNames();
     if (! userNames.isEmpty())
     {
         presetBox.addSectionHeading ("User");
-        for (const auto& n : userNames)
-        {
-            presetItems.push_back ({ false, n });
-            presetBox.addItem (n, id++);
-        }
+        for (const auto& n : userNames) { presetItems.push_back ({ false, n }); presetBox.addItem (n, id++); }
     }
 
-    // Reflect the currently-loaded preset name if we can find it.
     const auto current = pm.getCurrentName();
     for (size_t i = 0; i < presetItems.size(); ++i)
         if (presetItems[i].name == current)
@@ -198,20 +155,18 @@ void PikeAudioProcessorEditor::refreshPresets()
         }
 }
 
-void PikeAudioProcessorEditor::loadPresetAtComboId (int comboId)
+void PikeContent::loadPresetAtComboId (int comboId)
 {
     const int idx = comboId - 1;
     if (! juce::isPositiveAndBelow (idx, (int) presetItems.size()))
         return;
 
     auto& pm = audioProcessor.getPresetManager();
-    if (presetItems[(size_t) idx].factory)
-        pm.loadFactoryByName (presetItems[(size_t) idx].name);
-    else
-        pm.loadUser (presetItems[(size_t) idx].name);
+    if (presetItems[(size_t) idx].factory) pm.loadFactoryByName (presetItems[(size_t) idx].name);
+    else                                   pm.loadUser (presetItems[(size_t) idx].name);
 }
 
-void PikeAudioProcessorEditor::stepPreset (int direction)
+void PikeContent::stepPreset (int direction)
 {
     if (presetItems.empty())
         return;
@@ -219,11 +174,10 @@ void PikeAudioProcessorEditor::stepPreset (int direction)
     int idx = presetBox.getSelectedId() - 1;
     if (idx < 0) idx = 0;
     idx = (idx + direction + (int) presetItems.size()) % (int) presetItems.size();
-
-    presetBox.setSelectedId (idx + 1);   // triggers onChange -> load
+    presetBox.setSelectedId (idx + 1);
 }
 
-void PikeAudioProcessorEditor::showSaveDialog()
+void PikeContent::showSaveDialog()
 {
     saveDialog = std::make_unique<juce::AlertWindow> (
         "Save Preset", "Enter a name for the preset:", juce::MessageBoxIconType::NoIcon);
@@ -237,8 +191,7 @@ void PikeAudioProcessorEditor::showSaveDialog()
         {
             if (result == 1)
             {
-                const auto name = saveDialog->getTextEditorContents ("name");
-                const auto saved = audioProcessor.getPresetManager().savePreset (name);
+                const auto saved = audioProcessor.getPresetManager().savePreset (saveDialog->getTextEditorContents ("name"));
                 refreshPresets();
                 for (size_t i = 0; i < presetItems.size(); ++i)
                     if (! presetItems[i].factory && presetItems[i].name == saved)
@@ -252,9 +205,9 @@ void PikeAudioProcessorEditor::showSaveDialog()
 }
 
 //==============================================================================
-void PikeAudioProcessorEditor::paint (juce::Graphics& g)
+void PikeContent::paint (juce::Graphics& g)
 {
-    g.fillAll (juce::Colour (0xff1a1a1a));
+    g.fillAll (juce::Colour (0xff0b0e13));
 
     auto header = getLocalBounds().removeFromTop (kHeaderHeight).toFloat();
     juce::ColourGradient grad (juce::Colour (0xff232a35), header.getX(), header.getY(),
@@ -262,7 +215,6 @@ void PikeAudioProcessorEditor::paint (juce::Graphics& g)
     g.setGradientFill (grad);
     g.fillRect (header);
 
-    // Thin polished glint along the top edge only.
     auto glint = header.withHeight (5.0f);
     juce::ColourGradient gloss (juce::Colours::white.withAlpha (0.10f), glint.getX(), glint.getY(),
                                 juce::Colours::white.withAlpha (0.0f),  glint.getX(), glint.getBottom(), false);
@@ -285,23 +237,20 @@ void PikeAudioProcessorEditor::paint (juce::Graphics& g)
                 juce::Justification::bottomLeft, false);
     g.setColour (juce::Colour (0xff4d9eff));
     g.setFont (juce::Font (10.0f, juce::Font::bold));
-    g.drawText ("Synthesizer  v" JucePlugin_VersionString, text,
-                juce::Justification::topLeft, false);
+    g.drawText ("Synthesizer  v" JucePlugin_VersionString, text, juce::Justification::topLeft, false);
 }
 
-void PikeAudioProcessorEditor::resized()
+void PikeContent::resized()
 {
     auto area = getLocalBounds();
 
-    // Header eyecatchers: scope fills the middle, meter sits at the right.
     auto header = area.removeFromTop (kHeaderHeight).reduced (12, 10);
-    header.removeFromLeft (236);                 // logo text area
+    header.removeFromLeft (236);
     if (meter != nullptr) meter->setBounds (header.removeFromRight (42));
     header.removeFromRight (10);
     if (scope != nullptr) scope->setBounds (header);
 
-    // Preset bar.
-    auto bar = area.removeFromTop (34).reduced (8, 4);
+    auto bar = area.removeFromTop (kPresetHeight).reduced (8, 4);
     saveButton.setBounds (bar.removeFromRight (70));
     bar.removeFromRight (6);
     nextButton.setBounds (bar.removeFromRight (32));
@@ -310,4 +259,44 @@ void PikeAudioProcessorEditor::resized()
     presetBox.setBounds (bar.removeFromLeft (juce::jmin (340, bar.getWidth())));
 
     tabs.setBounds (area);
+}
+
+//==============================================================================
+PikeAudioProcessorEditor::PikeAudioProcessorEditor (PikeAudioProcessor& p)
+    : AudioProcessorEditor (&p), audioProcessor (p), content (p)
+{
+    setLookAndFeel (&lookAndFeel);
+    addAndMakeVisible (content);
+
+    setResizable (true, true);
+    if (auto* c = getConstrainer())
+        c->setFixedAspectRatio ((double) PikeContent::designW / (double) PikeContent::designH);
+    setResizeLimits (PikeContent::designW / 2, PikeContent::designH / 2,
+                     PikeContent::designW * 2, PikeContent::designH * 2);
+
+    setSize (1000, 655);
+}
+
+PikeAudioProcessorEditor::~PikeAudioProcessorEditor()
+{
+    setLookAndFeel (nullptr);
+}
+
+void PikeAudioProcessorEditor::paint (juce::Graphics& g)
+{
+    g.fillAll (juce::Colours::black);
+}
+
+void PikeAudioProcessorEditor::resized()
+{
+    auto r = getLocalBounds().toFloat();
+    const float s = juce::jmin (r.getWidth()  / (float) PikeContent::designW,
+                                r.getHeight() / (float) PikeContent::designH);
+
+    content.setBounds (0, 0, PikeContent::designW, PikeContent::designH);
+
+    const float sw = PikeContent::designW * s;
+    const float sh = PikeContent::designH * s;
+    content.setTransform (juce::AffineTransform::scale (s)
+                              .translated ((r.getWidth() - sw) * 0.5f, (r.getHeight() - sh) * 0.5f));
 }

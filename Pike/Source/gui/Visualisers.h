@@ -309,15 +309,22 @@ namespace pike::gui
             g.setColour (col::accent);
             g.strokePath (env, juce::PathStrokeType (1.6f));
 
-            // Playhead.
+            // Playhead with a soft radial glow.
             if (headVisible)
             {
                 const float hx = juce::jlimit (plot.getX(), ex, plot.getX() + headX);
                 const float hy = top + (1.0f - headVal) * (bottom - top);
-                g.setColour (col::accent.withAlpha (0.25f));
-                g.fillEllipse (hx - 5.0f, hy - 5.0f, 10.0f, 10.0f);
+
+                const float r = 13.0f;
+                juce::ColourGradient glow (col::accent.withAlpha (0.7f), hx, hy,
+                                           col::accent.withAlpha (0.0f), hx + r, hy, true);
+                g.setGradientFill (glow);
+                g.fillEllipse (hx - r, hy - r, 2.0f * r, 2.0f * r);
+
+                g.setColour (col::accent.brighter (0.4f));
+                g.fillEllipse (hx - 4.0f, hy - 4.0f, 8.0f, 8.0f);
                 g.setColour (juce::Colours::white);
-                g.fillEllipse (hx - 2.5f, hy - 2.5f, 5.0f, 5.0f);
+                g.fillEllipse (hx - 2.0f, hy - 2.0f, 4.0f, 4.0f);
             }
         }
 
