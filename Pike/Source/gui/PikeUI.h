@@ -104,6 +104,17 @@ namespace pike::gui
                 addAndMakeVisible (toggle);
                 buttonAtt = std::make_unique<BA> (state, spec.id, toggle);
             }
+
+            // Tag the widget so the editor can attach MIDI-Learn to it.
+            widget().getProperties().set ("pikePid", spec.id);
+        }
+
+        /** The active parameter-bound widget (for MIDI-Learn tagging/lookup). */
+        juce::Component& widget()
+        {
+            if (type == CtrlType::Knob)  return slider;
+            if (type == CtrlType::Combo) return combo;
+            return toggle;
         }
 
         void resized() override

@@ -288,6 +288,9 @@ void PikeAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
 
     const int numSamples = buffer.getNumSamples();
 
+    // MIDI Learn: bind/apply CC -> parameter mappings.
+    midiLearn.processMidi (midiMessages);
+
     // Tempo + MIDI mod sources (also sets currentBpm).
     updateModulationRuntime (midiMessages, numSamples);
 
@@ -455,16 +458,30 @@ juce::AudioProcessorEditor* PikeAudioProcessor::createEditor()
 //==============================================================================
 void PikeAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // Serialise the whole parameter tree to XML (ValueTree-based state).
-    if (auto xml = apvts.copyState().createXml())
-        copyXmlToBinary (*xml, destData);
+    // Wrapper root: <PikeState> [ APVTS state ] [ MidiLearn ].
+    juce::XmlElement root ("PikeState");
+    if (auto pxml = apvts.copyState().createXml())
+        root.addChildElement (pxml.release());
+    midiLearn.writeTo (root);
+    copyXmlToBinary (root, destData);
 }
 
 void PikeAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    if (auto xml = getXmlFromBinary (data, sizeInBytes))
-        if (xml->hasTagName (apvts.state.getType()))
-            apvts.replaceState (juce::ValueTree::fromXml (*xml));
+    auto xml = getXmlFromBinary (data, sizeInBytes);
+    if (xml == nullptr)
+        return;
+
+    if (xml->hasTagName ("PikeState"))
+    {
+        midiLearn.readFrom (*xml);
+        if (auto* pxml = xml->getChildByName (apvts.state.getType()))
+            apvts.replaceState (juce::ValueTree::fromXml (*pxml));
+    }
+    else if (xml->hasTagName (apvts.state.getType()))   // legacy (pre-wrapper) state
+    {
+        apvts.replaceState (juce::ValueTree::fromXml (*xml));
+    }
 }
 
 //==============================================================================

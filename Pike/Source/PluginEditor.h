@@ -40,6 +40,19 @@ private:
     void stepPreset (int direction);
     void showSaveDialog();
 
+    // MIDI Learn: right-click any parameter widget.
+    void installMidiLearn (juce::Component& c);
+    void handleMidiLearnClick (const juce::MouseEvent& e);
+    void showMidiLearnMenu (const juce::String& paramId);
+
+    struct LearnListener : juce::MouseListener
+    {
+        explicit LearnListener (PikeContent& o) : owner (o) {}
+        void mouseDown (const juce::MouseEvent& e) override { owner.handleMidiLearnClick (e); }
+        PikeContent& owner;
+    };
+    LearnListener learnListener { *this };
+
     PikeAudioProcessor& audioProcessor;
 
     juce::TabbedComponent tabs { juce::TabbedButtonBar::TabsAtTop };

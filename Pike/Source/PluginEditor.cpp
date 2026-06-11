@@ -89,6 +89,65 @@ PikeContent::PikeContent (PikeAudioProcessor& p) : audioProcessor (p)
     meter = std::make_unique<LevelMeter>   (audioProcessor.getVisualState());
     addAndMakeVisible (*scope);
     addAndMakeVisible (*meter);
+
+    // Right-click MIDI-Learn on every parameter widget.
+    installMidiLearn (*this);
+}
+
+//==============================================================================
+void PikeContent::installMidiLearn (juce::Component& c)
+{
+    for (auto* child : c.getChildren())
+    {
+        if (child->getProperties().contains ("pikePid"))
+            child->addMouseListener (&learnListener, true);   // include nested (e.g. text box)
+        installMidiLearn (*child);
+    }
+}
+
+void PikeContent::handleMidiLearnClick (const juce::MouseEvent& e)
+{
+    if (! e.mods.isPopupMenu())
+        return;
+
+    // Walk up from the clicked component to find the tagged parameter widget.
+    for (auto* c = e.eventComponent; c != nullptr; c = c->getParentComponent())
+    {
+        const auto pid = c->getProperties().getWithDefault ("pikePid", {}).toString();
+        if (pid.isNotEmpty())
+        {
+            showMidiLearnMenu (pid);
+            return;
+        }
+    }
+}
+
+void PikeContent::showMidiLearnMenu (const juce::String& paramId)
+{
+    auto* param = audioProcessor.getValueTreeState().getParameter (paramId);
+    if (param == nullptr)
+        return;
+
+    const int idx = param->getParameterIndex();
+    auto& mlm = audioProcessor.getMidiLearn();
+    const int cc = mlm.ccForParam (idx);
+    const bool armed = mlm.armedParam() == idx;
+
+    juce::PopupMenu m;
+    m.addSectionHeader (param->getName (40));
+    m.addItem (1, armed ? "MIDI Learn  (waiting for CC...)" : "MIDI Learn", true, armed);
+    if (cc >= 0)
+        m.addItem (2, "Forget CC " + juce::String (cc));
+    if (armed)
+        m.addItem (3, "Cancel Learn");
+
+    m.showMenuAsync (juce::PopupMenu::Options(), [this, idx] (int r)
+    {
+        auto& ml = audioProcessor.getMidiLearn();
+        if      (r == 1) ml.arm (idx);
+        else if (r == 2) ml.clearMapping (idx);
+        else if (r == 3) ml.cancel();
+    });
 }
 
 //==============================================================================

@@ -15,6 +15,7 @@
 #include "dsp/fx/FxChain.h"
 #include "dsp/fx/ParametricEQ.h"
 #include "presets/PresetManager.h"
+#include "midi/MidiLearnManager.h"
 #include "gui/VisualState.h"
 
 //==============================================================================
@@ -70,12 +71,16 @@ public:
     /** Realtime-safe visualisation data for the editor's animations. */
     pike::VisualState& getVisualState() noexcept { return visualState; }
 
+    /** MIDI Learn (CC -> parameter mappings). */
+    pike::MidiLearnManager& getMidiLearn() noexcept { return midiLearn; }
+
     static constexpr int numVoices = 8;
 
 private:
     //==============================================================================
     juce::AudioProcessorValueTreeState apvts;
     pike::PresetManager presetManager { *this, apvts };
+    pike::MidiLearnManager midiLearn { *this };
 
     juce::Synthesiser synth;
     pike::PikeVoice::Parameters voiceParameters;
