@@ -32,6 +32,10 @@
               file="Source/gui/FilterEnvPage.h"/>
         <FILE id="pkMod01" name="ModPage.h" compile="0" resource="0"
               file="Source/gui/ModPage.h"/>
+        <FILE id="pkOscP1" name="OscillatorsPage.h" compile="0" resource="0"
+              file="Source/gui/OscillatorsPage.h"/>
+        <FILE id="pkMix01" name="MixEqPage.h" compile="0" resource="0"
+              file="Source/gui/MixEqPage.h"/>
       </GROUP>
       <GROUP id="pkPre1" name="presets">
         <FILE id="pkFac01" name="FactoryPresets.h" compile="0" resource="0"
@@ -67,6 +71,8 @@
                 file="Source/dsp/fx/Delay.h"/>
           <FILE id="pkFxc01" name="FxChain.h" compile="0" resource="0"
                 file="Source/dsp/fx/FxChain.h"/>
+          <FILE id="pkEq01" name="ParametricEQ.h" compile="0" resource="0"
+                file="Source/dsp/fx/ParametricEQ.h"/>
         </GROUP>
       </GROUP>
       <GROUP id="pkSynth1" name="synth">

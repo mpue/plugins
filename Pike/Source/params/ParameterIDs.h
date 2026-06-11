@@ -130,4 +130,14 @@ namespace pid
     inline constexpr auto unisonDetune = "unisonDetune"; // cents
     inline constexpr auto glideTime    = "glideTime";    // seconds (0 = off)
     inline constexpr auto stereoWidth  = "stereoWidth";  // 0=mono .. 1=normal .. 2=wide
+
+    //==============================================================================
+    // Mix / EQ — 8-band parametric EQ (low shelf / 6 peaks / high shelf)
+    inline constexpr auto eqOn = "eqOn";
+    inline constexpr const char* eqFreq[8] =
+        { "eq1Freq", "eq2Freq", "eq3Freq", "eq4Freq", "eq5Freq", "eq6Freq", "eq7Freq", "eq8Freq" };
+    inline constexpr const char* eqGain[8] =
+        { "eq1Gain", "eq2Gain", "eq3Gain", "eq4Gain", "eq5Gain", "eq6Gain", "eq7Gain", "eq8Gain" };
+    inline constexpr const char* eqQ[8] =
+        { "eq1Q", "eq2Q", "eq3Q", "eq4Q", "eq5Q", "eq6Q", "eq7Q", "eq8Q" };
 }

@@ -13,6 +13,7 @@
 #include "synth/Arpeggiator.h"
 #include "synth/VoiceManager.h"
 #include "dsp/fx/FxChain.h"
+#include "dsp/fx/ParametricEQ.h"
 #include "presets/PresetManager.h"
 #include "gui/VisualState.h"
 
@@ -93,6 +94,10 @@ private:
     // Global post-mix effects.
     pike::FxChain fxChain;
     pike::FxChain::Params readFxParams() const;
+
+    // Mix / EQ.
+    pike::ParametricEQ eq;
+    void updateEqFromParams();
 
     // Arpeggiator + voice-mode dispatch.
     pike::Arpeggiator arpeggiator;

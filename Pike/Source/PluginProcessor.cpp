@@ -233,6 +233,7 @@ void PikeAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     wavetable.prepare (sampleRate);
 
     fxChain.prepare (sampleRate, samplesPerBlock, getTotalNumOutputChannels());
+    eq.prepare (sampleRate, samplesPerBlock);
 
     synth.setCurrentPlaybackSampleRate (sampleRate);
 
@@ -302,6 +303,15 @@ void PikeAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     // Global FX chain (Distortion -> Chorus -> Delay -> Reverb).
     fxChain.process (buffer, readFxParams(), currentBpm);
 
+    // Mix / EQ (8-band parametric).
+    updateEqFromParams();
+    if (eq.isEnabled() && buffer.getNumChannels() >= 1)
+    {
+        auto* L = buffer.getWritePointer (0);
+        auto* R = buffer.getNumChannels() > 1 ? buffer.getWritePointer (1) : L;
+        eq.processStereo (L, R, numSamples);
+    }
+
     // Master gain (dB -> linear), applied to the whole block.
     const float gainDb     = apvts.getRawParameterValue (pid::masterGain)->load();
     const float gainLinear = juce::Decibels::decibelsToGain (gainDb);
@@ -334,6 +344,17 @@ void PikeAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     if (L != nullptr)
         for (int i = 0; i < numSamples; ++i)
             visualState.pushScope (0.5f * (L[i] + R[i]));
+}
+
+void PikeAudioProcessor::updateEqFromParams()
+{
+    eq.setEnabled (apvts.getRawParameterValue (pid::eqOn)->load() > 0.5f);
+    for (int b = 0; b < pike::ParametricEQ::numBands; ++b)
+    {
+        eq.setBandFrequency (b, apvts.getRawParameterValue (pid::eqFreq[b])->load());
+        eq.setBandGain      (b, apvts.getRawParameterValue (pid::eqGain[b])->load());
+        eq.setBandQ         (b, apvts.getRawParameterValue (pid::eqQ[b])->load());
+    }
 }
 
 pike::FxChain::Params PikeAudioProcessor::readFxParams() const

@@ -258,6 +258,110 @@ namespace pike::gui
     };
 
     //==============================================================================
+    /** Draws one cycle of an oscillator's currently selected waveform, reading
+        the wave / pulse-width / wavetable-position parameters. */
+    class WaveformDisplay : public juce::Component, private juce::Timer
+    {
+    public:
+        WaveformDisplay (juce::AudioProcessorValueTreeState& s,
+                         juce::String waveId, juce::String pwId, juce::String wtPosId)
+            : state (s), wId (waveId), pwId (pwId), wtId (wtPosId)
+        {
+            startTimerHz (20);
+        }
+
+        void paint (juce::Graphics& g) override
+        {
+            auto b = getLocalBounds().toFloat().reduced (1.0f);
+            fillGlassPanel (g, b, 4.0f, juce::Colour (0xff222833), juce::Colour (0xff090c11), 0.08f);
+
+            auto plot = b.reduced (8.0f, 6.0f);
+            g.setColour (col::line.withAlpha (0.4f));
+            g.drawHorizontalLine ((int) plot.getCentreY(), plot.getX(), plot.getRight());
+
+            const int   wave = (int) get (wId);
+            const float pw   = get (pwId);
+            const float wt   = get (wtId);
+
+            const float midY = plot.getCentreY();
+            const float amp  = plot.getHeight() * 0.42f;
+            const int   w    = juce::jmax (2, (int) plot.getWidth());
+
+            juce::Path path;
+            for (int x = 0; x <= w; ++x)
+            {
+                const float p = (float) x / (float) w;             // 0..1 phase
+                const float v = juce::jlimit (-1.0f, 1.0f, sample (wave, p, pw, wt));
+                const float px = plot.getX() + (float) x;
+                const float py = midY - v * amp;
+                if (x == 0) path.startNewSubPath (px, py);
+                else        path.lineTo (px, py);
+            }
+
+            g.setColour (col::accent.withAlpha (0.25f));
+            g.strokePath (path, juce::PathStrokeType (3.0f));
+            g.setColour (col::accent);
+            g.strokePath (path, juce::PathStrokeType (1.6f));
+        }
+
+    private:
+        float get (const juce::String& id) const
+        {
+            if (auto* p = state.getRawParameterValue (id)) return p->load();
+            return 0.0f;
+        }
+
+        void timerCallback() override
+        {
+            const float s = get (wId) * 1000.0f + get (pwId) + get (wtId);
+            if (std::abs (s - lastSum) > 1.0e-6f) { lastSum = s; repaint(); }
+        }
+
+        // Single waveform shapes over one cycle phase p in [0,1).
+        static float basicShape (int wave, float p, float pw)
+        {
+            constexpr float twoPi = 6.2831853f;
+            switch (wave)
+            {
+                case 0: return std::sin (twoPi * p);                       // Sine
+                case 1: return 1.0f - 4.0f * std::abs (p - 0.5f);          // Triangle
+                case 2: return 2.0f * p - 1.0f;                            // Saw
+                case 3: return p < pw ? 1.0f : -1.0f;                      // Pulse
+                default: return std::sin (twoPi * p);
+            }
+        }
+
+        // Wavetable morphs sine -> tri -> saw -> square (matching the bank).
+        static float wavetableShape (float p, float wt)
+        {
+            const float fpos = juce::jlimit (0.0f, 1.0f, wt) * 3.0f;
+            const int   f0   = (int) fpos;
+            const int   f1   = juce::jmin (f0 + 1, 3);
+            const float ff   = fpos - (float) f0;
+            auto frame = [&] (int f) -> float
+            {
+                switch (f)
+                {
+                    case 0: return std::sin (6.2831853f * p);
+                    case 1: return 1.0f - 4.0f * std::abs (p - 0.5f);
+                    case 2: return 2.0f * p - 1.0f;
+                    default: return p < 0.5f ? 1.0f : -1.0f;
+                }
+            };
+            return frame (f0) + ff * (frame (f1) - frame (f0));
+        }
+
+        static float sample (int wave, float p, float pw, float wt)
+        {
+            return wave == 4 ? wavetableShape (p, wt) : basicShape (wave, p, pw);
+        }
+
+        juce::AudioProcessorValueTreeState& state;
+        juce::String wId, pwId, wtId;
+        float lastSum = -1.0e9f;
+    };
+
+    //==============================================================================
     class EnvelopeDisplay : public juce::Component, private juce::Timer
     {
     public:
