@@ -96,6 +96,11 @@ PikeContent::PikeContent (PikeAudioProcessor& p) : audioProcessor (p)
     for (int i = 0; i < tabs.getNumTabs(); ++i)
         if (auto* tc = tabs.getTabContentComponent (i))
             installMidiLearn (*tc);
+
+    // Visual feedback overlay (blinking outline while learning + CC badges).
+    learnOverlay = std::make_unique<pike::gui::MidiLearnOverlay> (
+        audioProcessor.getMidiLearn(), audioProcessor.getValueTreeState(), learnWidgets);
+    addAndMakeVisible (*learnOverlay);
 }
 
 //==============================================================================
@@ -104,7 +109,10 @@ void PikeContent::installMidiLearn (juce::Component& c)
     for (auto* child : c.getChildren())
     {
         if (child->getProperties().contains ("pikePid"))
+        {
             child->addMouseListener (&learnListener, true);   // include nested (e.g. text box)
+            learnWidgets.push_back (child);
+        }
         installMidiLearn (*child);
     }
 }
@@ -288,6 +296,9 @@ void PikeContent::resized()
     presetBox.setBounds (bar.removeFromLeft (juce::jmin (340, bar.getWidth())));
 
     tabs.setBounds (area);
+
+    if (learnOverlay != nullptr)
+        learnOverlay->setBounds (getLocalBounds());
 }
 
 //==============================================================================

@@ -36,6 +36,8 @@
               file="Source/gui/OscillatorsPage.h"/>
         <FILE id="pkMix01" name="MixEqPage.h" compile="0" resource="0"
               file="Source/gui/MixEqPage.h"/>
+        <FILE id="pkMlo01" name="MidiLearnOverlay.h" compile="0" resource="0"
+              file="Source/gui/MidiLearnOverlay.h"/>
       </GROUP>
       <GROUP id="pkMidi1" name="midi">
         <FILE id="pkMl01" name="MidiLearnManager.h" compile="0" resource="0"

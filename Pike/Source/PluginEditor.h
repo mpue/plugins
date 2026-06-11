@@ -20,6 +20,7 @@
 #include "gui/FilterEnvPage.h"
 #include "gui/ModPage.h"
 #include "gui/MixEqPage.h"
+#include "gui/MidiLearnOverlay.h"
 
 //==============================================================================
 /** All UI laid out at a fixed design size; the editor scales this component. */
@@ -52,6 +53,9 @@ private:
         PikeContent& owner;
     };
     LearnListener learnListener { *this };
+
+    std::vector<juce::Component::SafePointer<juce::Component>> learnWidgets;
+    std::unique_ptr<pike::gui::MidiLearnOverlay> learnOverlay;
 
     PikeAudioProcessor& audioProcessor;
 
