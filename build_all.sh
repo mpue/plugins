@@ -9,6 +9,7 @@
 #   ./build_all.sh --plugins AF-1,Lupo   # only these plugins
 #   ./build_all.sh --formats AU          # only AU (or VST3, or AU,VST3)
 #   ./build_all.sh --jobs 4              # parallel xcodebuild jobs (-jobs flag)
+#   ./build_all.sh --arch arm64          # x86_64 | arm64 | universal
 #
 # Exit codes: 0 = success, non-zero = at least one build failed.
 
@@ -18,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 # ── All plugins in the repo (subdir name == .jucer name) ─────────────────────
-ALL_PLUGINS=(AF-1 BC-1 BS-1 CD-1 CH-1 CP-1 CRV-1 DL-1 EQ8 FP-1 GS-1 HH-1 KM-1 LT-1 Lupo PM-1 PS-1 RV-1 SA-1 SN-1 ST-1 SW-1 TR-1 TS-1)
+ALL_PLUGINS=(AF-1 ARP-1 BC-1 BS-1 CD-1 CH-1 CP-1 CRV-1 DL-1 EQ8 FP-1 GS-1 HH-1 KM-1 LT-1 Lupo PM-1 PS-1 Pike RV-1 SA-1 SN-1 ST-1 SW-1 TR-1 TS-1)
 ALL_FORMATS=(AU VST3)
 
 # ── Args ─────────────────────────────────────────────────────────────────────
@@ -26,6 +27,7 @@ PLUGINS=()
 FORMATS=()
 CLEAN=0
 JOBS=""
+ARCH=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -33,14 +35,24 @@ while [[ $# -gt 0 ]]; do
         --plugins)      IFS=',' read -r -a PLUGINS <<< "$2"; shift 2 ;;
         --formats)      IFS=',' read -r -a FORMATS <<< "$2"; shift 2 ;;
         --jobs)         JOBS="$2"; shift 2 ;;
+        --arch)         ARCH="$2"; shift 2 ;;
         -h|--help)
-            sed -n '2,12p' "$0"; exit 0 ;;
+            sed -n '2,13p' "$0"; exit 0 ;;
         *) echo "Unknown argument: $1" >&2; exit 2 ;;
     esac
 done
 
 [[ ${#PLUGINS[@]} -eq 0 ]] && PLUGINS=("${ALL_PLUGINS[@]}")
 [[ ${#FORMATS[@]} -eq 0 ]] && FORMATS=("${ALL_FORMATS[@]}")
+
+# ── Architektur -> xcodebuild ARCHS ──────────────────────────────────────────
+ARCH_ARGS=()
+case "$ARCH" in
+    "")          ;;  # Projekt-Default
+    x86_64|arm64) ARCH_ARGS=( "ARCHS=$ARCH" "ONLY_ACTIVE_ARCH=NO" ) ;;
+    universal)    ARCH_ARGS=( "ARCHS=x86_64 arm64" "ONLY_ACTIVE_ARCH=NO" ) ;;
+    *) echo "ERROR: unknown --arch '$ARCH' (allowed: x86_64, arm64, universal)." >&2; exit 2 ;;
+esac
 
 # ── Locate Xcode ─────────────────────────────────────────────────────────────
 # JUCE projects need full Xcode (xcodebuild), not just command line tools.
@@ -90,6 +102,7 @@ build_one() {
         -quiet
     )
     [[ -n "$JOBS" ]] && xcb_args+=(-jobs "$JOBS")
+    [[ ${#ARCH_ARGS[@]} -gt 0 ]] && xcb_args+=("${ARCH_ARGS[@]}")
 
     if (( CLEAN )); then
         xcodebuild "${xcb_args[@]}" clean >"$log" 2>&1 || true
@@ -130,9 +143,9 @@ echo "════════════════════════�
 echo "  Build summary  (${ELAPSED}s)"
 echo "════════════════════════════════════════════════════════════════════"
 echo "  Succeeded: ${#SUCCEEDED[@]}"
-for s in "${SUCCEEDED[@]}"; do echo "    ✓ $s"; done
+for s in ${SUCCEEDED[@]+"${SUCCEEDED[@]}"}; do echo "    ✓ $s"; done
 echo "  Failed:    ${#FAILED[@]}"
-for f in "${FAILED[@]}"; do echo "    ✗ $f"; done
+for f in ${FAILED[@]+"${FAILED[@]}"}; do echo "    ✗ $f"; done
 echo "════════════════════════════════════════════════════════════════════"
 
 [[ ${#FAILED[@]} -eq 0 ]] || exit 1

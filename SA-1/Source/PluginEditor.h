@@ -14,6 +14,7 @@
 #include "ElegantDarkLookAndFeel.h"
 #include "PresetBar.h"
 #include "SamplerComponents.h"
+#include "SequencerComponents.h"
 
 class SA1AudioProcessorEditor  : public juce::AudioProcessorEditor,
                                  private juce::Timer
@@ -37,6 +38,7 @@ private:
     SA1::PadGrid             padGrid;
     SA1::BigWaveformDisplay  bigWaveform;
     SA1::PadParameterPanel   paramPanel;
+    SA1::StepSequencerPanel  sequencerPanel;
 
     juce::Rectangle<int>     headerBounds;
 

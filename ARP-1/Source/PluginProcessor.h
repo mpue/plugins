@@ -2,7 +2,7 @@
   ==============================================================================
 
     PluginProcessor.h
-    SA-1 Luxury Quick Sampler — drum sampler plugin processor.
+    ARP-1 Luxury Arpeggiator
 
   ==============================================================================
 */
@@ -10,16 +10,17 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "SamplerEngine.h"
-#include "StepSequencer.h"
+#include "ArpEngine.h"
+#include "PatternManager.h"
 #include "PresetManager.h"
 
-class SA1AudioProcessor  : public juce::AudioProcessor
+//==============================================================================
+class ARP1AudioProcessor  : public juce::AudioProcessor
 {
 public:
     //==============================================================================
-    SA1AudioProcessor();
-    ~SA1AudioProcessor() override;
+    ARP1AudioProcessor();
+    ~ARP1AudioProcessor() override;
 
     //==============================================================================
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
@@ -55,22 +56,17 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     //==============================================================================
-    SA1::SamplerEngine& getEngine()        noexcept { return engine; }
-    SA1::StepSequencer& getSequencer()     noexcept { return sequencer; }
-    SA1::PresetManager& getPresetManager() noexcept { return presetManager; }
-
-    /** Audition request from UI (RT-safe). */
-    void requestAudition (int padIndex, float velocity = 1.0f) noexcept;
+    ARP1::ArpEngine&      getEngine()         { return engine; }
+    ARP1::PatternManager& getPatternManager() { return patternManager; }
+    ARP1::PresetManager&  getPresetManager()  { return presetManager; }
 
 private:
-    SA1::SamplerEngine engine;
-    SA1::StepSequencer sequencer;
-    SA1::PresetManager presetManager;
+    //==============================================================================
+    ARP1::ArpEngine      engine;
+    ARP1::PatternManager patternManager { engine };
+    ARP1::PresetManager  presetManager { engine, patternManager };
 
-    struct PendingAudition { int padIndex; float velocity; };
+    juce::MidiBuffer    arpOutput;   // scratch buffer reused each block
 
-    std::array<std::atomic<int>,   SA1::kNumPads> auditionPending {};
-    std::array<std::atomic<float>, SA1::kNumPads> auditionVelocity {};
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SA1AudioProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARP1AudioProcessor)
 };

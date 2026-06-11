@@ -10,6 +10,9 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+#include <algorithm>
+#include <array>
+
 //==============================================================================
 SA1AudioProcessor::SA1AudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -18,9 +21,9 @@ SA1AudioProcessor::SA1AudioProcessor()
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
                        ),
-       presetManager (engine)
+       presetManager (engine, sequencer)
 #else
-     : presetManager (engine)
+     : presetManager (engine, sequencer)
 #endif
 {
     for (auto& a : auditionPending)  a.store (0);
@@ -51,6 +54,7 @@ void SA1AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     engine.prepare (sampleRate, samplesPerBlock);
     engine.reset();
+    sequencer.prepare (sampleRate);
 }
 
 void SA1AudioProcessor::releaseResources()
@@ -89,53 +93,104 @@ void SA1AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mi
 
     if (numSamples == 0) return;
 
-    // Drain queued auditions from the UI
+    const bool seqMode = sequencer.isEnabled();
+
+    // ---- Merged event timeline for this block -------------------------------
+    // Trigger / release events are sorted by sample offset and applied between
+    // sub-block renders so every voice starts sample-accurately, whether it
+    // came from a live note, a UI audition, or a sequencer step.
+    struct Ev { int offset; int type; int pad; float vel; };   // type: 0 = trigger, 1 = release
+    std::array<Ev, 1024> events;
+    int numEvents = 0;
+    auto addEvent = [&] (int off, int type, int pad, float vel)
+    {
+        if (numEvents < (int) events.size())
+            events[(size_t) numEvents++] = { off, type, pad, vel };
+    };
+
+    // Queued auditions from the UI fire at the top of the block.
     for (int p = 0; p < SA1::kNumPads; ++p)
     {
         const int pending = auditionPending[(size_t) p].exchange (0, std::memory_order_acquire);
         if (pending > 0)
-            engine.triggerPad (p, auditionVelocity[(size_t) p].load (std::memory_order_relaxed));
+            addEvent (0, 0, p, auditionVelocity[(size_t) p].load (std::memory_order_relaxed));
     }
 
-    // Process MIDI events sample-accurately by chunks
-    int offset = 0;
-    auto it = midi.cbegin();
+    // ---- MIDI ---------------------------------------------------------------
+    // In sequencer mode notes drive the sequencer gate instead of pads.
+    std::array<SA1::SeqNoteEvent, 256> seqNotes;
+    int numSeqNotes = 0;
+
+    for (const auto meta : midi)
+    {
+        const auto m   = meta.getMessage();
+        const int  off = juce::jlimit (0, numSamples - 1, meta.samplePosition);
+
+        if (seqMode)
+        {
+            if (m.isNoteOn() && numSeqNotes < (int) seqNotes.size())
+                seqNotes[(size_t) numSeqNotes++] = { off, true };
+            else if (m.isNoteOff() && numSeqNotes < (int) seqNotes.size())
+                seqNotes[(size_t) numSeqNotes++] = { off, false };
+        }
+        else
+        {
+            if (m.isNoteOn())
+            {
+                const float vel = juce::jlimit (0.05f, 1.0f, (float) m.getFloatVelocity());
+                const int   pad = engine.padForMidiNote (m.getNoteNumber());
+                if (pad >= 0) addEvent (off, 0, pad, vel);
+            }
+            else if (m.isNoteOff())
+            {
+                const int pad = engine.padForMidiNote (m.getNoteNumber());
+                if (pad >= 0) addEvent (off, 1, pad, 0.0f);
+            }
+        }
+    }
+
+    // ---- Host transport snapshot -------------------------------------------
+    SA1::SeqHostInfo host;
+    if (auto* ph = getPlayHead())
+    {
+        if (auto pos = ph->getPosition())
+        {
+            host.isPlaying = pos->getIsPlaying();
+            if (auto bpm = pos->getBpm())         host.bpm             = *bpm;
+            if (auto ppq = pos->getPpqPosition()) host.ppqAtBlockStart = *ppq;
+        }
+    }
+
+    // ---- Sequencer: collect sample-accurate step fires ----------------------
+    if (seqMode)
+    {
+        sequencer.renderBlock (numSamples, host, seqNotes.data(), numSeqNotes,
+                               [&] (int off, int pad, float vel) { addEvent (off, 0, pad, vel); });
+    }
+
+    // ---- Sort & render between events ---------------------------------------
+    std::stable_sort (events.begin(), events.begin() + numEvents,
+                      [] (const Ev& a, const Ev& b) { return a.offset < b.offset; });
+
+    int offset = 0, idx = 0;
     while (offset < numSamples)
     {
-        int nextEventSample = numSamples;
-        // peek at next event
-        auto temp = it;
-        if (temp != midi.cend())
-            nextEventSample = juce::jlimit (offset, numSamples,
-                                            (*temp).samplePosition);
+        const int nextEventSample = idx < numEvents
+                                      ? juce::jlimit (offset, numSamples, events[(size_t) idx].offset)
+                                      : numSamples;
 
-        // Render up to next event
         const int subBlock = nextEventSample - offset;
         if (subBlock > 0)
             engine.renderBlock (buffer, offset, subBlock);
 
         offset = nextEventSample;
 
-        // Apply all events occurring at this offset
-        while (it != midi.cend() && (*it).samplePosition <= offset)
+        while (idx < numEvents && events[(size_t) idx].offset <= offset)
         {
-            const auto m = (*it).getMessage();
-            if (m.isNoteOn())
-            {
-                const int  note = m.getNoteNumber();
-                const float vel = juce::jlimit (0.05f, 1.0f, (float) m.getFloatVelocity());
-                const int   pad = engine.padForMidiNote (note);
-                if (pad >= 0)
-                    engine.triggerPad (pad, vel);
-            }
-            else if (m.isNoteOff())
-            {
-                const int note = m.getNoteNumber();
-                const int pad  = engine.padForMidiNote (note);
-                if (pad >= 0)
-                    engine.releasePad (pad);
-            }
-            ++it;
+            const auto& e = events[(size_t) idx];
+            if (e.type == 0) engine.triggerPad (e.pad, e.vel);
+            else             engine.releasePad (e.pad);
+            ++idx;
         }
     }
 }

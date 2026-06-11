@@ -17,7 +17,8 @@ SA1AudioProcessorEditor::SA1AudioProcessorEditor (SA1AudioProcessor& p)
       presetBar   (p.getPresetManager()),
       padGrid     (p),
       bigWaveform (p),
-      paramPanel  (p)
+      paramPanel  (p),
+      sequencerPanel (p)
 {
     setLookAndFeel (&lookAndFeel);
 
@@ -25,6 +26,7 @@ SA1AudioProcessorEditor::SA1AudioProcessorEditor (SA1AudioProcessor& p)
     addAndMakeVisible (padGrid);
     addAndMakeVisible (bigWaveform);
     addAndMakeVisible (paramPanel);
+    addAndMakeVisible (sequencerPanel);
 
     padGrid.onSelectedPadChanged = [this] (int idx) { onPadSelectionChanged (idx); };
     padGrid.onChanged            = [this]           { onAllPadsChanged(); };
@@ -41,13 +43,14 @@ SA1AudioProcessorEditor::SA1AudioProcessorEditor (SA1AudioProcessor& p)
             padGrid.getPadComponent (i).repaint();
         paramPanel.refreshFromPad();
         bigWaveform.repaint();
+        sequencerPanel.refreshFromSequencer();
     };
 
     paramPanel.setSelectedPad (padGrid.getSelectedPad());
     bigWaveform.setSelectedPad (padGrid.getSelectedPad());
 
     setResizable (false, false);
-    setSize (1180, 760);
+    setSize (1180, 980);
     startTimerHz (45);
 }
 
@@ -148,14 +151,20 @@ void SA1AudioProcessorEditor::resized()
     bounds.removeFromTop (8);
 
     // Big waveform — top row, full width less margin
-    auto waveformArea = bounds.removeFromTop (240).reduced (12, 0);
+    auto waveformArea = bounds.removeFromTop (200).reduced (12, 0);
     bigWaveform.setBounds (waveformArea);
 
     bounds.removeFromTop (12);
 
-    // Below: pad grid (left) + parameter panel (right)
+    // Step sequencer — bottom strip, full width
+    auto seqArea = bounds.removeFromBottom (320).reduced (12, 0);
+    seqArea.removeFromBottom (12);
+    sequencerPanel.setBounds (seqArea);
+
+    bounds.removeFromBottom (12);
+
+    // Middle: pad grid (left) + parameter panel (right)
     auto bottom = bounds.reduced (12, 0);
-    bottom.removeFromBottom (12);
 
     const int paramWidth = 380;
     auto padArea   = bottom.removeFromLeft (bottom.getWidth() - paramWidth - 12);

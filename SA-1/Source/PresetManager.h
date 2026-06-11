@@ -15,14 +15,15 @@
 
 #include <JuceHeader.h>
 #include "SamplerEngine.h"
+#include "StepSequencer.h"
 
 namespace SA1
 {
     class PresetManager
     {
     public:
-        explicit PresetManager (SamplerEngine& engineRef)
-            : engine (engineRef)
+        PresetManager (SamplerEngine& engineRef, StepSequencer& seqRef)
+            : engine (engineRef), sequencer (seqRef)
         {
             rescanUserPresets();
             currentPresetName = "Init";
@@ -101,7 +102,80 @@ namespace SA1
                 padsNode.appendChild (p, nullptr);
             }
             state.appendChild (padsNode, nullptr);
+
+            state.appendChild (captureSequencer(), nullptr);
             return state;
+        }
+
+        /** Serialise the step sequencer (mode, parameters and pattern grid). */
+        juce::ValueTree captureSequencer() const
+        {
+            juce::ValueTree seq ("Sequencer");
+            seq.setProperty ("enabled",  sequencer.isEnabled(),          nullptr);
+            seq.setProperty ("sync",     (int) sequencer.getSyncMode(),  nullptr);
+            seq.setProperty ("hold",     (int) sequencer.getHoldMode(),  nullptr);
+            seq.setProperty ("rate",     sequencer.getRateIndex(),       nullptr);
+            seq.setProperty ("numSteps", sequencer.getNumSteps(),        nullptr);
+            seq.setProperty ("swing",    sequencer.getSwing(),           nullptr);
+
+            for (int p = 0; p < kNumPads; ++p)
+            {
+                juce::String mask, vels;
+                for (int s = 0; s < kSeqMaxSteps; ++s)
+                {
+                    mask << (sequencer.getStep (p, s) ? '1' : '0');
+                    if (s > 0) vels << ',';
+                    vels << juce::String (sequencer.getStepVel (p, s), 3);
+                }
+                juce::ValueTree t ("Track");
+                t.setProperty ("pad",  p,    nullptr);
+                t.setProperty ("mask", mask, nullptr);
+                t.setProperty ("vels", vels, nullptr);
+                seq.appendChild (t, nullptr);
+            }
+            return seq;
+        }
+
+        void applySequencer (const juce::ValueTree& seq)
+        {
+            // Always start from a clean slate so presets without a sequencer
+            // node reset cleanly.
+            sequencer.clearAll();
+            sequencer.setEnabled  (false);
+            sequencer.setSyncMode (SeqSync::HostLock);
+            sequencer.setHoldMode (SeqHold::Gate);
+            sequencer.setRateIndex (3);
+            sequencer.setNumSteps  (16);
+            sequencer.setSwing     (0.0f);
+
+            if (! seq.isValid() || ! seq.hasType ("Sequencer"))
+                return;
+
+            sequencer.setEnabled  ((bool) seq.getProperty ("enabled",  false));
+            sequencer.setSyncMode ((SeqSync) (int) seq.getProperty ("sync", 0));
+            sequencer.setHoldMode ((SeqHold) (int) seq.getProperty ("hold", 0));
+            sequencer.setRateIndex ((int) seq.getProperty ("rate",     3));
+            sequencer.setNumSteps  ((int) seq.getProperty ("numSteps", 16));
+            sequencer.setSwing    ((float) seq.getProperty ("swing",   0.0f));
+
+            for (int c = 0; c < seq.getNumChildren(); ++c)
+            {
+                auto t = seq.getChild (c);
+                if (! t.hasType ("Track")) continue;
+                const int p = (int) t.getProperty ("pad", -1);
+                if (! juce::isPositiveAndBelow (p, kNumPads)) continue;
+
+                const juce::String mask = t.getProperty ("mask", "").toString();
+                juce::StringArray  vels;
+                vels.addTokens (t.getProperty ("vels", "").toString(), ",", "");
+
+                for (int s = 0; s < kSeqMaxSteps; ++s)
+                {
+                    sequencer.setStep (p, s, s < mask.length() && mask[s] == '1');
+                    if (s < vels.size())
+                        sequencer.setStepVel (p, s, vels[s].getFloatValue());
+                }
+            }
         }
 
         /** Apply a captured ValueTree back into the engine. Re-loads sample files
@@ -148,6 +222,8 @@ namespace SA1
                     }
                 }
             }
+
+            applySequencer (state.getChildWithName ("Sequencer"));
 
             if (onPresetLoaded) onPresetLoaded();
         }
@@ -241,6 +317,7 @@ namespace SA1
                 s = PadState {};   // reset all parameters
             }
             engine.setMasterGainDb (0.0f);
+            applySequencer ({});   // clears pattern + resets sequencer defaults
             setCurrentPresetName ("Init");
             if (onPresetLoaded) onPresetLoaded();
         }
@@ -280,6 +357,7 @@ namespace SA1
         }
 
         SamplerEngine&    engine;
+        StepSequencer&    sequencer;
         juce::StringArray userPresetNames;
         juce::String      currentPresetName;
     };
