@@ -1,127 +1,114 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<JUCERPROJECT id="C2Etqf" name="Pike" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" companyName="Matthias Pueski"
-              pluginVST3Category="Instrument" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn"
-              pluginManufacturer="Matthias Pueski" cppLanguageStandard="20"
-              pluginDesc="Pike - Polyphonic Hybrid Synthesizer">
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<JUCERPROJECT id="C2Etqf" name="Pike" projectType="audioplug" useAppConfig="0" addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" companyName="Matthias Pueski" pluginVST3Category="Instrument" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn" pluginManufacturer="Matthias Pueski" cppLanguageStandard="20" pluginDesc="Pike - Polyphonic Hybrid Synthesizer">
   <MAINGROUP id="ooIRR4" name="Pike">
     <GROUP id="{224F4DEE-AE07-884D-A2A2-4F2BE8F735EC}" name="Images">
-      <FILE id="qfQaT6" name="Knob_64.png" compile="0" resource="1" file="Images/Knob_64.png"/>
+      <FILE id="qfQaT6" name="Knob_64.png" compile="0" resource="1" file="Images/Knob_64.png" />
     </GROUP>
     <GROUP id="{5EF2B998-9AD4-6879-EF94-4EE3F1AAA8ED}" name="Source">
-      <FILE id="bmZzZh" name="PluginProcessor.cpp" compile="1" resource="0"
-            file="Source/PluginProcessor.cpp"/>
-      <FILE id="M5pBxP" name="ElegantDarkLookAndFeel.h" compile="0" resource="0"
-            file="Source/ElegantDarkLookAndFeel.h"/>
-      <FILE id="nEJLPs" name="PluginProcessor.h" compile="0" resource="0"
-            file="Source/PluginProcessor.h"/>
-      <FILE id="YHaBDL" name="PluginEditor.cpp" compile="1" resource="0"
-            file="Source/PluginEditor.cpp"/>
-      <FILE id="t02QAP" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
+      <FILE id="bmZzZh" name="PluginProcessor.cpp" compile="1" resource="0" file="Source/PluginProcessor.cpp" />
+      <FILE id="M5pBxP" name="ElegantDarkLookAndFeel.h" compile="0" resource="0" file="Source/ElegantDarkLookAndFeel.h" />
+      <FILE id="nEJLPs" name="PluginProcessor.h" compile="0" resource="0" file="Source/PluginProcessor.h" />
+      <FILE id="YHaBDL" name="PluginEditor.cpp" compile="1" resource="0" file="Source/PluginEditor.cpp" />
+      <FILE id="t02QAP" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h" />
       <GROUP id="pkGui1" name="gui">
-        <FILE id="pkGls01" name="GlassStyle.h" compile="0" resource="0"
-              file="Source/gui/GlassStyle.h"/>
-        <FILE id="pkUi01" name="PikeUI.h" compile="0" resource="0"
-              file="Source/gui/PikeUI.h"/>
-        <FILE id="pkVis01" name="VisualState.h" compile="0" resource="0"
-              file="Source/gui/VisualState.h"/>
-        <FILE id="pkVis02" name="Visualisers.h" compile="0" resource="0"
-              file="Source/gui/Visualisers.h"/>
-        <FILE id="pkVis03" name="FilterEnvPage.h" compile="0" resource="0"
-              file="Source/gui/FilterEnvPage.h"/>
-        <FILE id="pkMod01" name="ModPage.h" compile="0" resource="0"
-              file="Source/gui/ModPage.h"/>
+        <FILE id="pkGls01" name="GlassStyle.h" compile="0" resource="0" file="Source/gui/GlassStyle.h" />
+        <FILE id="pkUi01" name="PikeUI.h" compile="0" resource="0" file="Source/gui/PikeUI.h" />
+        <FILE id="pkVis01" name="VisualState.h" compile="0" resource="0" file="Source/gui/VisualState.h" />
+        <FILE id="pkVis02" name="Visualisers.h" compile="0" resource="0" file="Source/gui/Visualisers.h" />
+        <FILE id="pkVis03" name="FilterEnvPage.h" compile="0" resource="0" file="Source/gui/FilterEnvPage.h" />
+        <FILE id="pkMod01" name="ModPage.h" compile="0" resource="0" file="Source/gui/ModPage.h" />
       </GROUP>
       <GROUP id="pkPre1" name="presets">
-        <FILE id="pkFac01" name="FactoryPresets.h" compile="0" resource="0"
-              file="Source/presets/FactoryPresets.h"/>
-        <FILE id="pkPm01" name="PresetManager.h" compile="0" resource="0"
-              file="Source/presets/PresetManager.h"/>
+        <FILE id="pkFac01" name="FactoryPresets.h" compile="0" resource="0" file="Source/presets/FactoryPresets.h" />
+        <FILE id="pkPm01" name="PresetManager.h" compile="0" resource="0" file="Source/presets/PresetManager.h" />
       </GROUP>
       <GROUP id="pkParams1" name="params">
-        <FILE id="pkPid01" name="ParameterIDs.h" compile="0" resource="0"
-              file="Source/params/ParameterIDs.h"/>
-        <FILE id="pkPlyH1" name="ParameterLayout.h" compile="0" resource="0"
-              file="Source/params/ParameterLayout.h"/>
-        <FILE id="pkPlyC1" name="ParameterLayout.cpp" compile="1" resource="0"
-              file="Source/params/ParameterLayout.cpp"/>
-        <FILE id="pkMmd01" name="ModMatrixDefs.h" compile="0" resource="0"
-              file="Source/params/ModMatrixDefs.h"/>
+        <FILE id="pkPid01" name="ParameterIDs.h" compile="0" resource="0" file="Source/params/ParameterIDs.h" />
+        <FILE id="pkPlyH1" name="ParameterLayout.h" compile="0" resource="0" file="Source/params/ParameterLayout.h" />
+        <FILE id="pkPlyC1" name="ParameterLayout.cpp" compile="1" resource="0" file="Source/params/ParameterLayout.cpp" />
+        <FILE id="pkMmd01" name="ModMatrixDefs.h" compile="0" resource="0" file="Source/params/ModMatrixDefs.h" />
       </GROUP>
       <GROUP id="pkDsp1" name="dsp">
-        <FILE id="pkOsc01" name="Oscillator.h" compile="0" resource="0"
-              file="Source/dsp/Oscillator.h"/>
-        <FILE id="pkWt01" name="Wavetable.h" compile="0" resource="0"
-              file="Source/dsp/Wavetable.h"/>
-        <FILE id="pkNz01" name="Noise.h" compile="0" resource="0"
-              file="Source/dsp/Noise.h"/>
-        <FILE id="pkFlt01" name="Filter.h" compile="0" resource="0"
-              file="Source/dsp/Filter.h"/>
-        <FILE id="pkLfo01" name="Lfo.h" compile="0" resource="0"
-              file="Source/dsp/Lfo.h"/>
+        <FILE id="pkOsc01" name="Oscillator.h" compile="0" resource="0" file="Source/dsp/Oscillator.h" />
+        <FILE id="pkWt01" name="Wavetable.h" compile="0" resource="0" file="Source/dsp/Wavetable.h" />
+        <FILE id="pkNz01" name="Noise.h" compile="0" resource="0" file="Source/dsp/Noise.h" />
+        <FILE id="pkFlt01" name="Filter.h" compile="0" resource="0" file="Source/dsp/Filter.h" />
+        <FILE id="pkLfo01" name="Lfo.h" compile="0" resource="0" file="Source/dsp/Lfo.h" />
         <GROUP id="pkFx1" name="fx">
-          <FILE id="pkDist01" name="Distortion.h" compile="0" resource="0"
-                file="Source/dsp/fx/Distortion.h"/>
-          <FILE id="pkDly01" name="Delay.h" compile="0" resource="0"
-                file="Source/dsp/fx/Delay.h"/>
-          <FILE id="pkFxc01" name="FxChain.h" compile="0" resource="0"
-                file="Source/dsp/fx/FxChain.h"/>
+          <FILE id="pkDist01" name="Distortion.h" compile="0" resource="0" file="Source/dsp/fx/Distortion.h" />
+          <FILE id="pkDly01" name="Delay.h" compile="0" resource="0" file="Source/dsp/fx/Delay.h" />
+          <FILE id="pkFxc01" name="FxChain.h" compile="0" resource="0" file="Source/dsp/fx/FxChain.h" />
         </GROUP>
       </GROUP>
       <GROUP id="pkSynth1" name="synth">
-        <FILE id="pkSnd01" name="PikeSound.h" compile="0" resource="0"
-              file="Source/synth/PikeSound.h"/>
-        <FILE id="pkVoi01" name="PikeVoice.h" compile="0" resource="0"
-              file="Source/synth/PikeVoice.h"/>
-        <FILE id="pkArp01" name="Arpeggiator.h" compile="0" resource="0"
-              file="Source/synth/Arpeggiator.h"/>
-        <FILE id="pkVm01" name="VoiceManager.h" compile="0" resource="0"
-              file="Source/synth/VoiceManager.h"/>
+        <FILE id="pkSnd01" name="PikeSound.h" compile="0" resource="0" file="Source/synth/PikeSound.h" />
+        <FILE id="pkVoi01" name="PikeVoice.h" compile="0" resource="0" file="Source/synth/PikeVoice.h" />
+        <FILE id="pkArp01" name="Arpeggiator.h" compile="0" resource="0" file="Source/synth/Arpeggiator.h" />
+        <FILE id="pkVm01" name="VoiceManager.h" compile="0" resource="0" file="Source/synth/VoiceManager.h" />
       </GROUP>
     </GROUP>
   </MAINGROUP>
   <MODULES>
-    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_audio_formats" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_audio_plugin_client" showAllCode="1" useLocalCopy="0"
-            useGlobalPath="1"/>
-    <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_audio_processors_headless" showAllCode="1" useLocalCopy="0"
-            useGlobalPath="1"/>
-    <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_dsp" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_audio_formats" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_audio_plugin_client" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_audio_processors_headless" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_dsp" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
   </MODULES>
-  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"/>
+  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0" />
   <EXPORTFORMATS>
     <XCODE_MAC targetFolder="Builds/MacOSX">
       <CONFIGURATIONS>
-        <CONFIGURATION isDebug="1" name="Debug" targetName="Pike"/>
-        <CONFIGURATION isDebug="0" name="Release" targetName="Pike"/>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="Pike" />
+        <CONFIGURATION isDebug="0" name="Release" targetName="Pike" />
       </CONFIGURATIONS>
       <MODULEPATHS>
-        <MODULEPATH id="juce_audio_basics" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_audio_devices" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_audio_formats" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_audio_plugin_client" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_audio_processors" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_audio_processors_headless" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_audio_utils" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_core" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_data_structures" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_dsp" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_events" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_graphics" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_gui_basics" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_gui_extra" path="../../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_basics" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_audio_devices" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_audio_formats" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_audio_plugin_client" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_audio_processors" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_audio_processors_headless" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_audio_utils" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_core" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_data_structures" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_dsp" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_events" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_graphics" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_gui_basics" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_gui_extra" path="../../JUCE/modules" />
       </MODULEPATHS>
     </XCODE_MAC>
+    <VS2022 targetFolder="Builds/VisualStudio2022">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" />
+        <CONFIGURATION isDebug="0" name="Release" optimisation="3" useRuntimeLibDLL="0" />
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_audio_basics" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_audio_devices" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_audio_formats" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_audio_plugin_client" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_audio_processors" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_audio_processors_headless" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_audio_utils" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_core" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_data_structures" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_dsp" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_events" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_graphics" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_gui_basics" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_gui_extra" path="D:\devel\JUCE8\modules" />
+      </MODULEPATHS>
+    </VS2022>
   </EXPORTFORMATS>
 </JUCERPROJECT>

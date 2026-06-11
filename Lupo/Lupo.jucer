@@ -195,6 +195,10 @@
         <FILE id="Ij9PXs" name="WaveTable.h" compile="0" resource="0" file="Source/AudioEngine/WaveTable.h"/>
         <FILE id="DKQlTI" name="WhiteNoise.cpp" compile="1" resource="0" file="Source/AudioEngine/WhiteNoise.cpp"/>
         <FILE id="IkBTTo" name="WhiteNoise.h" compile="0" resource="0" file="Source/AudioEngine/WhiteNoise.h"/>
+        <FILE id="AeChrd" name="ChordManager.cpp" compile="1" resource="0" file="Source/AudioEngine/ChordManager.cpp"/>
+        <FILE id="AeEqAt" name="EQAutomationTrack.cpp" compile="1" resource="0" file="Source/AudioEngine/EQAutomationTrack.cpp"/>
+        <FILE id="AePeq1" name="ParametricEQ.cpp" compile="1" resource="0" file="Source/AudioEngine/ParametricEQ.cpp"/>
+        <FILE id="AeStsq" name="StepSequencer.cpp" compile="1" resource="0" file="Source/AudioEngine/StepSequencer.cpp"/>
       </GROUP>
       <FILE id="KxpK4I" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
@@ -203,6 +207,8 @@
       <FILE id="J4b20V" name="PluginEditor.cpp" compile="1" resource="0"
             file="Source/PluginEditor.cpp"/>
       <FILE id="qVggQy" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
+      <FILE id="SrEqpn" name="EQPanel.cpp" compile="1" resource="0" file="Source/EQPanel.cpp"/>
+      <FILE id="SrStsp" name="StepSequencerPanel.cpp" compile="1" resource="0" file="Source/StepSequencerPanel.cpp"/>
     </GROUP>
   </MAINGROUP>
   <EXPORTFORMATS>

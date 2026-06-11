@@ -1,76 +1,82 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<JUCERPROJECT id="zDXKJ2" name="RV-1" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginManufacturer="Matthias Pueski"
-              pluginFormats="buildAU,buildStandalone,buildVST3" companyName="Aquist"
-              pluginName="RV-1" pluginDesc="RV-1 Luxury Reverb" pluginManufacturerCode="Aqst"
-              pluginCode="Rv1A">
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<JUCERPROJECT id="zDXKJ2" name="RV-1" projectType="audioplug" useAppConfig="0" addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginManufacturer="Matthias Pueski" pluginFormats="buildAU,buildStandalone,buildVST3" companyName="Aquist" pluginName="RV-1" pluginDesc="RV-1 Luxury Reverb" pluginManufacturerCode="Aqst" pluginCode="Rv1A">
   <MAINGROUP id="MESycu" name="RV-1">
     <GROUP id="{3B86C7AA-9E3F-4F10-AB31-F12345670000}" name="Resources">
-      <FILE id="ImgKnob01" name="Knob_64.png" compile="0" resource="1"
-            file="Images/Knob_64.png"/>
+      <FILE id="ImgKnob01" name="Knob_64.png" compile="0" resource="1" file="Images/Knob_64.png" />
     </GROUP>
     <GROUP id="{609B233F-DDF2-99B4-FC11-654C64139520}" name="Source">
-      <FILE id="DhP1Nd" name="ElegantDarkLookAndFeel.h" compile="0" resource="0"
-            file="Source/ElegantDarkLookAndFeel.h"/>
-      <FILE id="LxRvHd" name="LuxuryReverb.h" compile="0" resource="0"
-            file="Source/LuxuryReverb.h"/>
-      <FILE id="RvVizHd" name="ReverbVisualizer.h" compile="0" resource="0"
-            file="Source/ReverbVisualizer.h"/>
-      <FILE id="PrMgrHd" name="PresetManager.h" compile="0" resource="0"
-            file="Source/PresetManager.h"/>
-      <FILE id="PrMgrCp" name="PresetManager.cpp" compile="1" resource="0"
-            file="Source/PresetManager.cpp"/>
-      <FILE id="EHeo9s" name="PluginProcessor.cpp" compile="1" resource="0"
-            file="Source/PluginProcessor.cpp"/>
-      <FILE id="D0gtMa" name="PluginProcessor.h" compile="0" resource="0"
-            file="Source/PluginProcessor.h"/>
-      <FILE id="boIOZE" name="PluginEditor.cpp" compile="1" resource="0"
-            file="Source/PluginEditor.cpp"/>
-      <FILE id="HJB8qP" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
+      <FILE id="DhP1Nd" name="ElegantDarkLookAndFeel.h" compile="0" resource="0" file="Source/ElegantDarkLookAndFeel.h" />
+      <FILE id="LxRvHd" name="LuxuryReverb.h" compile="0" resource="0" file="Source/LuxuryReverb.h" />
+      <FILE id="RvVizHd" name="ReverbVisualizer.h" compile="0" resource="0" file="Source/ReverbVisualizer.h" />
+      <FILE id="PrMgrHd" name="PresetManager.h" compile="0" resource="0" file="Source/PresetManager.h" />
+      <FILE id="PrMgrCp" name="PresetManager.cpp" compile="1" resource="0" file="Source/PresetManager.cpp" />
+      <FILE id="EHeo9s" name="PluginProcessor.cpp" compile="1" resource="0" file="Source/PluginProcessor.cpp" />
+      <FILE id="D0gtMa" name="PluginProcessor.h" compile="0" resource="0" file="Source/PluginProcessor.h" />
+      <FILE id="boIOZE" name="PluginEditor.cpp" compile="1" resource="0" file="Source/PluginEditor.cpp" />
+      <FILE id="HJB8qP" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h" />
     </GROUP>
   </MAINGROUP>
   <MODULES>
-    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_audio_formats" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_audio_plugin_client" showAllCode="1" useLocalCopy="0"
-            useGlobalPath="1"/>
-    <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_audio_processors_headless" showAllCode="1" useLocalCopy="0"
-            useGlobalPath="1"/>
-    <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_dsp" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
-    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_audio_formats" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_audio_plugin_client" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_audio_processors_headless" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_dsp" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
+    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0" useGlobalPath="1" />
   </MODULES>
-  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"/>
+  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0" />
   <EXPORTFORMATS>
     <XCODE_MAC targetFolder="Builds/MacOSX">
       <CONFIGURATIONS>
-        <CONFIGURATION isDebug="1" name="Debug" targetName="RV-1"/>
-        <CONFIGURATION isDebug="0" name="Release" targetName="RV-1"/>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="RV-1" />
+        <CONFIGURATION isDebug="0" name="Release" targetName="RV-1" />
       </CONFIGURATIONS>
       <MODULEPATHS>
-        <MODULEPATH id="juce_audio_basics" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_audio_devices" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_audio_formats" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_audio_plugin_client" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_audio_processors" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_audio_processors_headless" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_audio_utils" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_core" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_data_structures" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_events" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_graphics" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_gui_basics" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_gui_extra" path="../../JUCE/modules"/>
-        <MODULEPATH id="juce_dsp" path="../../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_basics" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_audio_devices" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_audio_formats" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_audio_plugin_client" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_audio_processors" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_audio_processors_headless" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_audio_utils" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_core" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_data_structures" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_events" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_graphics" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_gui_basics" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_gui_extra" path="../../JUCE/modules" />
+        <MODULEPATH id="juce_dsp" path="../../JUCE/modules" />
       </MODULEPATHS>
     </XCODE_MAC>
+    <VS2022 targetFolder="Builds/VisualStudio2022">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" />
+        <CONFIGURATION isDebug="0" name="Release" optimisation="3" useRuntimeLibDLL="0" />
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_audio_basics" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_audio_devices" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_audio_formats" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_audio_plugin_client" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_audio_processors" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_audio_processors_headless" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_audio_utils" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_core" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_data_structures" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_dsp" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_events" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_graphics" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_gui_basics" path="D:\devel\JUCE8\modules" />
+        <MODULEPATH id="juce_gui_extra" path="D:\devel\JUCE8\modules" />
+      </MODULEPATHS>
+    </VS2022>
   </EXPORTFORMATS>
 </JUCERPROJECT>
