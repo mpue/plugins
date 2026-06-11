@@ -307,6 +307,21 @@ void PikeAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     const float gainLinear = juce::Decibels::decibelsToGain (gainDb);
     buffer.applyGain (gainLinear);
 
+    // Stereo width (mid/side): 0 = mono, 1 = normal, 2 = wide.
+    const float width = apvts.getRawParameterValue (pid::stereoWidth)->load();
+    if (buffer.getNumChannels() >= 2 && std::abs (width - 1.0f) > 1.0e-4f)
+    {
+        auto* wL = buffer.getWritePointer (0);
+        auto* wR = buffer.getWritePointer (1);
+        for (int i = 0; i < numSamples; ++i)
+        {
+            const float mid  = 0.5f * (wL[i] + wR[i]);
+            const float side = 0.5f * (wL[i] - wR[i]) * width;
+            wL[i] = mid + side;
+            wR[i] = mid - side;
+        }
+    }
+
     // ----- publish visualisation data (realtime-safe) -----
     const int   numCh = buffer.getNumChannels();
     const float peakL = numCh > 0 ? buffer.getMagnitude (0, 0, numSamples) : 0.0f;

@@ -137,7 +137,7 @@ namespace pike
                 return;
 
             auto* v = voices[(size_t) idx];
-            v->setUnison (unisonOffset (unisonIndex), unisonGain());
+            v->setUnison (unisonOffset (unisonIndex), unisonGain(), unisonPan (unisonIndex));
             v->startNote (note, vel, nullptr, 0);
             voiceNote[(size_t) idx] = note;
             voiceAge[(size_t) idx]  = ++ageCounter;
@@ -155,7 +155,7 @@ namespace pike
                 }
                 else // Mono: retrigger
                 {
-                    v->setUnison (unisonOffset (i), unisonGain());
+                    v->setUnison (unisonOffset (i), unisonGain(), unisonPan (i));
                     v->startNote (note, vel, nullptr, 0);
                 }
                 voiceNote[(size_t) monoVoices[i]] = note;
@@ -189,6 +189,15 @@ namespace pike
         float unisonGain() const noexcept
         {
             return 1.0f / std::sqrt ((float) juce::jmax (1, unison));
+        }
+
+        // Spreads unison voices across the stereo field (0..1); single voice is centred.
+        float unisonPan (int u) const noexcept
+        {
+            if (unison <= 1)
+                return 0.5f;
+            constexpr float spread = 0.9f;
+            return 0.5f + ((float) u / (float) (unison - 1) - 0.5f) * spread;
         }
 
         void pushStack (int note, float vel) noexcept

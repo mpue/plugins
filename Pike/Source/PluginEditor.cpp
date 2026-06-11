@@ -93,7 +93,8 @@ namespace
                 K (pid::arpGate, "Gate"), K (pid::arpOctaves, "Octaves"), T (pid::arpLatch, "Latch") } },
             { "Voice",
               { C (pid::voiceMode, "Mode"), K (pid::unisonCount, "Unison"),
-                K (pid::unisonDetune, "Detune"), K (pid::glideTime, "Glide") } },
+                K (pid::unisonDetune, "Detune"), K (pid::stereoWidth, "Width"),
+                K (pid::glideTime, "Glide") } },
         };
     }
 }

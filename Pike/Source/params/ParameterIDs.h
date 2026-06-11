@@ -129,4 +129,5 @@ namespace pid
     inline constexpr auto unisonCount  = "unisonCount";  // 1..7
     inline constexpr auto unisonDetune = "unisonDetune"; // cents
     inline constexpr auto glideTime    = "glideTime";    // seconds (0 = off)
+    inline constexpr auto stereoWidth  = "stereoWidth";  // 0=mono .. 1=normal .. 2=wide
 }

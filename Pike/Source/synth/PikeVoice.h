@@ -132,11 +132,15 @@ namespace pike
         }
 
         //======================================================================
-        /** Per-voice unison settings: detune (cents) and an output gain. */
-        void setUnison (float detuneCents, float gain) noexcept
+        /** Per-voice unison settings: detune (cents), output gain and stereo pan
+            (0 = left, 0.5 = centre, 1 = right). Centre keeps full level in both
+            channels so a single voice stays mono-compatible. */
+        void setUnison (float detuneCents, float gain, float pan) noexcept
         {
             unisonMult = (float) std::exp2 (detuneCents / 1200.0);
             unisonGain = gain;
+            panL = juce::jmin (1.0f, 2.0f * (1.0f - pan));
+            panR = juce::jmin (1.0f, 2.0f * pan);
         }
 
         int  getCurrentNote() const noexcept { return currentNote; }
@@ -338,10 +342,19 @@ namespace pike
 
                 const float filtered = filter.process (mix);
 
-                // ----- amp VCA + unison gain -----
+                // ----- amp VCA + unison gain + stereo pan -----
                 const float sample = filtered * ampVal * level * unisonGain;
-                for (int ch = 0; ch < numChannels; ++ch)
-                    outputBuffer.addSample (ch, startSample + i, sample);
+                if (numChannels >= 2)
+                {
+                    outputBuffer.addSample (0, startSample + i, sample * panL);
+                    outputBuffer.addSample (1, startSample + i, sample * panR);
+                    for (int ch = 2; ch < numChannels; ++ch)
+                        outputBuffer.addSample (ch, startSample + i, sample);
+                }
+                else
+                {
+                    outputBuffer.addSample (0, startSample + i, sample);
+                }
 
                 ++samplesSinceNoteOn;
 
@@ -469,6 +482,7 @@ namespace pike
         // Unison (set by the VoiceManager per allocated voice).
         float unisonMult = 1.0f;
         float unisonGain = 1.0f;
+        float panL = 1.0f, panR = 1.0f;
 
         // Cached per-block oscillator / mixer state.
         double oscMult[numOscillators]          { 1.0, 1.0, 1.0 };

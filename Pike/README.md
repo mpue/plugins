@@ -372,3 +372,13 @@ Daten über [VisualState.h](Source/gui/VisualState.h), die GUI pollt per Timer):
   Spielen den Hüllkurvenverlauf abfährt (retriggert pro Note/Arp-Step)
   ([Visualisers.h](Source/gui/Visualisers.h), [FilterEnvPage.h](Source/gui/FilterEnvPage.h)).
 - Meter/Scope/Envelopes animieren live, sobald MIDI-Noten gespielt werden.
+
+### Unison-Stereo & Stereo-Width
+
+- Unison-Stimmen werden jetzt **über das Stereofeld verteilt** (Pan-Spread),
+  damit die **Detune**-Verstimmung deutlich hörbar/breit wird (Detune wirkt
+  naturgemäß erst ab Unison ≥ 2). Eine einzelne Stimme bleibt mono-kompatibel
+  (Center = volle Pegel L/R).
+- Neuer **Stereo-Width**-Regler (Mid/Side, 0 % = Mono … 100 % = normal …
+  200 % = breit) auf dem *Arp / Voice*-Tab im *Voice*-Bereich; wirkt global auf
+  das Ausgangssignal (Unison-Spread, FX-Stereo).

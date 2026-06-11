@@ -444,6 +444,12 @@ namespace pike
                 ID { pid::glideTime, pid::version }, "Glide Time",
                 timeRange (0.0f, 2.0f, 0.1f), 0.0f,
                 juce::AudioParameterFloatAttributes().withStringFromValueFunction (secondsText)));
+
+            layout.add (std::make_unique<APF> (
+                ID { pid::stereoWidth, pid::version }, "Stereo Width",
+                Range (0.0f, 2.0f, 0.001f), 1.0f,
+                juce::AudioParameterFloatAttributes()
+                    .withStringFromValueFunction ([] (float v, int) { return juce::String (juce::roundToInt (v * 100.0f)) + " %"; })));
         }
 
         return layout;
