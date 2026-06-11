@@ -20,6 +20,8 @@
             file="Source/PluginEditor.cpp"/>
       <FILE id="t02QAP" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
       <GROUP id="pkGui1" name="gui">
+        <FILE id="pkGls01" name="GlassStyle.h" compile="0" resource="0"
+              file="Source/gui/GlassStyle.h"/>
         <FILE id="pkUi01" name="PikeUI.h" compile="0" resource="0"
               file="Source/gui/PikeUI.h"/>
         <FILE id="pkVis01" name="VisualState.h" compile="0" resource="0"

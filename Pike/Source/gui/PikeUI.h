@@ -16,6 +16,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "GlassStyle.h"
 
 namespace pike::gui
 {
@@ -164,17 +165,8 @@ namespace pike::gui
             const juce::Colour accent { 0xff4d9eff };
             auto b = getLocalBounds().toFloat().reduced (2.5f);
 
-            // Body gradient (raised look; the parent draws the shadow behind us).
-            juce::ColourGradient body (juce::Colour (0xff333945), b.getX(), b.getY(),
-                                       juce::Colour (0xff191c23), b.getX(), b.getBottom(), false);
-            g.setGradientFill (body);
-            g.fillRoundedRectangle (b, 7.0f);
-
-            // Specular top highlight + border.
-            g.setColour (juce::Colours::white.withAlpha (0.06f));
-            g.drawLine (b.getX() + 7.0f, b.getY() + 1.0f, b.getRight() - 7.0f, b.getY() + 1.0f, 1.0f);
-            g.setColour (juce::Colour (0xff3b414c));
-            g.drawRoundedRectangle (b, 7.0f, 1.0f);
+            // Glossy glass panel (the parent draws the drop shadow behind us).
+            fillGlassPanel (g, b, 8.0f);
 
             // Title with accent tab + underline.
             auto titleBar = b.removeFromTop ((float) layout::titleH);
@@ -260,8 +252,8 @@ namespace pike::gui
 
         void paint (juce::Graphics& g) override
         {
-            juce::ColourGradient bg (juce::Colour (0xff242832), 0.0f, 0.0f,
-                                     juce::Colour (0xff141619), 0.0f, (float) getHeight(), false);
+            juce::ColourGradient bg (juce::Colour (0xff2a313c), 0.0f, 0.0f,
+                                     juce::Colour (0xff141820), 0.0f, (float) getHeight(), false);
             g.setGradientFill (bg);
             g.fillAll();
 

@@ -393,3 +393,16 @@ Daten über [VisualState.h](Source/gui/VisualState.h), die GUI pollt per Timer):
   den Panels gezeichnet (`paintPanelShadows`), damit er in den Zwischenräumen
   sichtbar ist; plus etwas mehr Tonwert-Kontrast (hellere Panel-Oberkante) für
   mehr Tiefe.
+
+### Glas-Optik (Glassmorphism)
+
+Einheitlicher, glänzender Glas-Look über einen gemeinsamen Painter
+([GlassStyle.h](Source/gui/GlassStyle.h) → `fillGlassPanel`):
+
+- Getönter Vertikal-Verlauf als Körper, **Spiegel-Sheen** über der oberen
+  Hälfte (oben gerundet beschnitten), **helle Lichtkante** oben und ein
+  Licht/Dunkel-Bevel-Rand → Panels wirken wie gewölbtes Glas.
+- Plot-Panels (Scope, Meter, Filter-Response, Envelopes) nutzen eine **dunklere
+  Glas-Variante** (schwacher Sheen), damit die Kurven gut lesbar bleiben.
+- Header mit Glanz-Sheen und heller Oberkante; Seiten-Hintergründe mit etwas
+  bläulicherem Verlauf für mehr Tiefe.

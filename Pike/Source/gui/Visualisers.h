@@ -14,6 +14,7 @@
 
 #include <JuceHeader.h>
 #include "VisualState.h"
+#include "GlassStyle.h"
 
 namespace pike::gui
 {
@@ -22,6 +23,12 @@ namespace pike::gui
         const juce::Colour accent { 0xff4d9eff };
         const juce::Colour panel  { 0xff181b22 };
         const juce::Colour line    { 0xff404040 };
+    }
+
+    /** Dark glass background for plot panels (keeps the plot area readable). */
+    inline void fillGlassPlot (juce::Graphics& g, juce::Rectangle<float> b, float corner)
+    {
+        fillGlassPanel (g, b, corner, juce::Colour (0xff262c38), juce::Colour (0xff111419), 0.06f);
     }
 
     //==============================================================================
@@ -33,8 +40,7 @@ namespace pike::gui
         void paint (juce::Graphics& g) override
         {
             auto b = getLocalBounds().toFloat();
-            g.setColour (col::panel);
-            g.fillRoundedRectangle (b, 3.0f);
+            fillGlassPlot (g, b, 4.0f);
 
             const float gap = 3.0f;
             const float bw  = (b.getWidth() - 3.0f * gap) * 0.5f;
@@ -86,8 +92,7 @@ namespace pike::gui
         void paint (juce::Graphics& g) override
         {
             auto b = getLocalBounds().toFloat();
-            g.setColour (col::panel);
-            g.fillRoundedRectangle (b, 3.0f);
+            fillGlassPlot (g, b, 4.0f);
             g.setColour (col::line.withAlpha (0.5f));
             g.drawHorizontalLine ((int) b.getCentreY(), b.getX(), b.getRight());
 
@@ -135,10 +140,7 @@ namespace pike::gui
         void paint (juce::Graphics& g) override
         {
             auto b = getLocalBounds().toFloat().reduced (1.0f);
-            g.setColour (col::panel);
-            g.fillRoundedRectangle (b, 4.0f);
-            g.setColour (col::line);
-            g.drawRoundedRectangle (b, 4.0f, 1.0f);
+            fillGlassPlot (g, b, 4.0f);
 
             g.setColour (col::accent.withAlpha (0.8f));
             g.setFont (juce::Font (10.0f, juce::Font::bold));
@@ -270,10 +272,7 @@ namespace pike::gui
         void paint (juce::Graphics& g) override
         {
             auto b = getLocalBounds().toFloat().reduced (1.0f);
-            g.setColour (col::panel);
-            g.fillRoundedRectangle (b, 4.0f);
-            g.setColour (col::line);
-            g.drawRoundedRectangle (b, 4.0f, 1.0f);
+            fillGlassPlot (g, b, 4.0f);
 
             g.setColour (col::accent.withAlpha (0.8f));
             g.setFont (juce::Font (10.0f, juce::Font::bold));
