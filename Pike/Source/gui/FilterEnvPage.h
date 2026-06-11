@@ -35,6 +35,10 @@ namespace pike::gui
                 knob (pid::filterEnvAmount, "Env Amt") } });
             addAndMakeVisible (*filterGroup);
 
+            filterResponse = std::make_unique<FilterResponse> (
+                state, pid::filterType, pid::filterSlope, pid::filterCutoff, pid::filterResonance);
+            addAndMakeVisible (*filterResponse);
+
             auto addEnv = [&] (juce::String title, juce::String a, juce::String d,
                                juce::String s, juce::String r)
             {
@@ -56,8 +60,12 @@ namespace pike::gui
             const int pad = 8;
             int y = pad;
 
-            filterGroup->setBounds (pad, y, filterGroup->preferredWidth(), filterGroup->preferredHeight());
-            y += filterGroup->preferredHeight() + pad;
+            const int fgW = filterGroup->preferredWidth();
+            const int fgH = filterGroup->preferredHeight();
+            filterGroup->setBounds (pad, y, fgW, fgH);
+            filterResponse->setBounds (pad + fgW + pad, y,
+                                       juce::jmax (200, width - fgW - 3 * pad), fgH);
+            y += fgH + pad;
 
             for (auto& b : envBlocks)
             {
@@ -74,6 +82,16 @@ namespace pike::gui
             return y + pad;
         }
 
+        void paint (juce::Graphics& g) override
+        {
+            juce::ColourGradient bg (juce::Colour (0xff242832), 0.0f, 0.0f,
+                                     juce::Colour (0xff141619), 0.0f, (float) getHeight(), false);
+            g.setGradientFill (bg);
+            g.fillAll();
+
+            paintPanelShadows (g, *this);
+        }
+
         void resized() override { layoutForWidth (getWidth()); }
 
     private:
@@ -83,8 +101,9 @@ namespace pike::gui
             std::unique_ptr<Group>           knobs;
         };
 
-        std::unique_ptr<Group>  filterGroup;
-        std::vector<EnvBlock>    envBlocks;
+        std::unique_ptr<Group>          filterGroup;
+        std::unique_ptr<FilterResponse> filterResponse;
+        std::vector<EnvBlock>           envBlocks;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FilterEnvPage)
     };

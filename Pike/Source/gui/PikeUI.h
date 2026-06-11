@@ -43,6 +43,22 @@ namespace pike::gui
         constexpr int maxCols = 4;
     }
 
+    /** Draws a soft drop shadow behind each visible child panel. Call from the
+        parent's paint() (before children paint) so the shadow shows in the gaps. */
+    inline void paintPanelShadows (juce::Graphics& g, juce::Component& parent)
+    {
+        for (auto* c : parent.getChildren())
+        {
+            if (c == nullptr || ! c->isVisible())
+                continue;
+
+            juce::DropShadow ds (juce::Colours::black.withAlpha (0.55f), 12, { 0, 5 });
+            juce::Path p;
+            p.addRoundedRectangle (c->getBounds().toFloat().reduced (2.5f), 7.0f);
+            ds.drawForPath (g, p);
+        }
+    }
+
     //==============================================================================
     class Control : public juce::Component
     {
@@ -146,19 +162,11 @@ namespace pike::gui
         void paint (juce::Graphics& g) override
         {
             const juce::Colour accent { 0xff4d9eff };
-            auto b = getLocalBounds().toFloat().reduced (2.0f);
+            auto b = getLocalBounds().toFloat().reduced (2.5f);
 
-            // Drop shadow for depth.
-            {
-                juce::DropShadow ds (juce::Colours::black.withAlpha (0.55f), 8, { 0, 2 });
-                juce::Path p;
-                p.addRoundedRectangle (b, 7.0f);
-                ds.drawForPath (g, p);
-            }
-
-            // Body gradient (raised look).
-            juce::ColourGradient body (juce::Colour (0xff2b3038), b.getX(), b.getY(),
-                                       juce::Colour (0xff181b21), b.getX(), b.getBottom(), false);
+            // Body gradient (raised look; the parent draws the shadow behind us).
+            juce::ColourGradient body (juce::Colour (0xff333945), b.getX(), b.getY(),
+                                       juce::Colour (0xff191c23), b.getX(), b.getBottom(), false);
             g.setGradientFill (body);
             g.fillRoundedRectangle (b, 7.0f);
 
@@ -252,10 +260,12 @@ namespace pike::gui
 
         void paint (juce::Graphics& g) override
         {
-            juce::ColourGradient bg (juce::Colour (0xff21242b), 0.0f, 0.0f,
+            juce::ColourGradient bg (juce::Colour (0xff242832), 0.0f, 0.0f,
                                      juce::Colour (0xff141619), 0.0f, (float) getHeight(), false);
             g.setGradientFill (bg);
             g.fillAll();
+
+            paintPanelShadows (g, *this);
         }
 
         void resized() override

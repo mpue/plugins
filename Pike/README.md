@@ -382,3 +382,14 @@ Daten über [VisualState.h](Source/gui/VisualState.h), die GUI pollt per Timer):
 - Neuer **Stereo-Width**-Regler (Mid/Side, 0 % = Mono … 100 % = normal …
   200 % = breit) auf dem *Arp / Voice*-Tab im *Voice*-Bereich; wirkt global auf
   das Ausgangssignal (Unison-Spread, FX-Stereo).
+
+### Filter-Frequenzgang & Panel-Schatten
+
+- **Filter-Response-Anzeige** neben der Filter-Sektion (*Filter / Env*-Tab):
+  zeichnet den Magnitudengang live aus Type / Slope / Cutoff / Resonanz
+  (LP/BP/HP, 12/24 dB, Resonanzspitze) mit Frequenz-Gitter (100 Hz/1 k/10 k) und
+  Cutoff-Marker ([Visualisers.h](Source/gui/Visualisers.h) → `FilterResponse`).
+- **Weicher Schlagschatten** unter allen Panels: wird vom Eltern-Container hinter
+  den Panels gezeichnet (`paintPanelShadows`), damit er in den Zwischenräumen
+  sichtbar ist; plus etwas mehr Tonwert-Kontrast (hellere Panel-Oberkante) für
+  mehr Tiefe.
