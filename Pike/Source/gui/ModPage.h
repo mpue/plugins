@@ -34,18 +34,21 @@ namespace pike::gui
                 row.src = std::make_unique<juce::ComboBox>();
                 row.src->addItemList (sources, 1);
                 row.src->setJustificationType (juce::Justification::centredLeft);
+                row.src->getProperties().set ("pikePid", pid::modSourceId (s));
                 addAndMakeVisible (*row.src);
                 row.srcAtt = std::make_unique<ComboAtt> (state, pid::modSourceId (s), *row.src);
 
                 row.dst = std::make_unique<juce::ComboBox>();
                 row.dst->addItemList (dests, 1);
                 row.dst->setJustificationType (juce::Justification::centredLeft);
+                row.dst->getProperties().set ("pikePid", pid::modDestId (s));
                 addAndMakeVisible (*row.dst);
                 row.dstAtt = std::make_unique<ComboAtt> (state, pid::modDestId (s), *row.dst);
 
                 row.depth = std::make_unique<juce::Slider> (juce::Slider::RotaryHorizontalVerticalDrag,
                                                             juce::Slider::NoTextBox);
                 row.depth->setPopupDisplayEnabled (true, true, this);
+                row.depth->getProperties().set ("pikePid", pid::modDepthId (s));
                 addAndMakeVisible (*row.depth);
                 row.depthAtt = std::make_unique<SliderAtt> (state, pid::modDepthId (s), *row.depth);
             }

@@ -19,6 +19,10 @@
         <FILE id="pkMod01" name="ModPage.h" compile="0" resource="0" file="Source/gui/ModPage.h" />
         <FILE id="pkOscPg" name="OscillatorsPage.h" compile="0" resource="0" file="Source/gui/OscillatorsPage.h" />
         <FILE id="pkMixEq" name="MixEqPage.h" compile="0" resource="0" file="Source/gui/MixEqPage.h" />
+        <FILE id="pkMlo01" name="MidiLearnOverlay.h" compile="0" resource="0" file="Source/gui/MidiLearnOverlay.h" />
+      </GROUP>
+      <GROUP id="pkMidi1" name="midi">
+        <FILE id="pkMl01" name="MidiLearnManager.h" compile="0" resource="0" file="Source/midi/MidiLearnManager.h" />
       </GROUP>
       <GROUP id="pkPre1" name="presets">
         <FILE id="pkFac01" name="FactoryPresets.h" compile="0" resource="0" file="Source/presets/FactoryPresets.h" />

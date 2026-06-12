@@ -20,6 +20,7 @@
 #include "gui/FilterEnvPage.h"
 #include "gui/ModPage.h"
 #include "gui/MixEqPage.h"
+#include "gui/MidiLearnOverlay.h"
 
 //==============================================================================
 /** All UI laid out at a fixed design size; the editor scales this component. */
@@ -39,6 +40,22 @@ private:
     void loadPresetAtComboId (int comboId);
     void stepPreset (int direction);
     void showSaveDialog();
+
+    // MIDI Learn: right-click any parameter widget.
+    void installMidiLearn (juce::Component& c);
+    void handleMidiLearnClick (const juce::MouseEvent& e);
+    void showMidiLearnMenu (const juce::String& paramId);
+
+    struct LearnListener : juce::MouseListener
+    {
+        explicit LearnListener (PikeContent& o) : owner (o) {}
+        void mouseDown (const juce::MouseEvent& e) override { owner.handleMidiLearnClick (e); }
+        PikeContent& owner;
+    };
+    LearnListener learnListener { *this };
+
+    std::vector<juce::Component::SafePointer<juce::Component>> learnWidgets;
+    std::unique_ptr<pike::gui::MidiLearnOverlay> learnOverlay;
 
     PikeAudioProcessor& audioProcessor;
 
