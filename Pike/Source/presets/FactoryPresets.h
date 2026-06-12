@@ -231,6 +231,69 @@ namespace pike
             { pid::delayOn, 1 }, { pid::delaySync, 1 }, { pid::delayMix, 0.2f },
             { pid::reverbOn, 1 }, { pid::reverbSize, 0.9f }, { pid::reverbMix, 0.5f } } });
 
+        //======================================================================
+        // Sound-designer presets — converted from user patches (diffs against
+        // defaults, generated from the original .pikepreset XML snapshots).
+
+        // 18. Fatter Unison Lead — 5-voice unison saw, brighter EQ, hot output.
+        presets.push_back ({ "Fatter Unison Lead", V {
+            { pid::masterGain, 6 }, { pid::ampAttack, 0.01f }, { pid::ampRelease, 0.3f },
+            { pid::noiseLevel, 0.013f }, { pid::filterCutoff, 6000.0f }, { pid::filterResonance, 0.2f },
+            { pid::filterEnvAmount, 0.3f }, { pid::filtDecay, 0.6f }, { pid::filtSustain, 0.5f },
+            { pid::chorusOn, 1 }, { pid::chorusMix, 0.35f }, { pid::unisonCount, 5 },
+            { pid::unisonDetune, 22 }, { pid::glideTime, 0.06f }, { pid::eqOn, 1 },
+            { pid::oscWave[0], 2 }, { pid::eqFreq[0], 2520.944f }, { pid::eqGain[0], 5.7f },
+            { pid::eqFreq[5], 4522.075f }, { pid::eqGain[5], 8 }, { pid::eqFreq[7], 8556.34f },
+            { pid::eqGain[7], 5.6f } } });
+
+        // 19. Long Voyage Pad — slow triple-saw swell, driven 24 dB filter, wide.
+        presets.push_back ({ "Long Voyage Pad", V {
+            { pid::ampAttack, 1.47187f }, { pid::ampDecay, 0.29141f }, { pid::ampSustain, 1 },
+            { pid::ampRelease, 4.61177f }, { pid::noiseLevel, 0.111f }, { pid::filterSlope, 1 },
+            { pid::filterCutoff, 79.4915f }, { pid::filterResonance, 0.379f }, { pid::filterKeyTrack, 0.896f },
+            { pid::filterDrive, 0.585f }, { pid::filterEnvAmount, 1 }, { pid::filtAttack, 10 },
+            { pid::filtDecay, 4.18308f }, { pid::filtSustain, 0.178f }, { pid::filtRelease, 7.17617f },
+            { pid::auxAttack, 0.00106f }, { pid::unisonCount, 3 }, { pid::stereoWidth, 2 },
+            { pid::oscWave[0], 2 }, { pid::oscWave[1], 2 }, { pid::oscFine[1], 11.9f },
+            { pid::oscLevel[1], 1 }, { pid::oscWave[2], 2 }, { pid::oscFine[2], -5.5f },
+            { pid::oscLevel[2], 0.805f } } });
+
+        // 20. PikaBass — wavetable bass, hard distortion, LFO-modulated, punchy EQ.
+        presets.push_back ({ "PikaBass", V {
+            { pid::ampRelease, 0.06637f }, { pid::filterCutoff, 236.2072f }, { pid::filterResonance, 0.358f },
+            { pid::filterDrive, 0.792f }, { pid::filterEnvAmount, 1 }, { pid::filtAttack, 0.52547f },
+            { pid::filtDecay, 0.94554f }, { pid::filtSustain, 0 }, { pid::filtRelease, 0.23457f },
+            { pid::distOn, 1 }, { pid::distType, 1 }, { pid::distDrive, 0.481f },
+            { pid::chorusOn, 1 }, { pid::chorusDepth, 0.562f }, { pid::chorusFeedback, -0.242f },
+            { pid::chorusMix, 0.405f }, { pid::reverbOn, 1 }, { pid::reverbSize, 0.098f },
+            { pid::reverbWidth, 0.719f }, { pid::arpOctaves, 2 }, { pid::unisonCount, 4 },
+            { pid::unisonDetune, 34.6f }, { pid::glideTime, 0.00215f }, { pid::eqOn, 1 },
+            { pid::oscWave[0], 4 }, { pid::oscWtPos[0], 0.282f }, { pid::lfoRate[0], 0.38644f },
+            { pid::modSourceId (0), 3 }, { pid::modDestId (0), 5 }, { pid::modDepthId (0), 0.616f },
+            { pid::modSourceId (1), 5 }, { pid::modDestId (1), 12 }, { pid::modDepthId (1), 0.64f },
+            { pid::modDepthId (2), -0.144f }, { pid::modDepthId (5), -0.211f }, { pid::modDepthId (8), -0.275f },
+            { pid::eqFreq[3], 60.46467f }, { pid::eqGain[3], 8.9f }, { pid::eqFreq[6], 6579.75f },
+            { pid::eqGain[6], 2 }, { pid::eqFreq[7], 14492.13f }, { pid::eqGain[7], 15.4f } } });
+
+        // 21. Spinner's Glocke — synced bell, long decays, latched up/down arp.
+        presets.push_back ({ "Spinner's Glocke", V {
+            { pid::ampAttack, 0.01f }, { pid::ampDecay, 8.24462f }, { pid::ampSustain, 1 },
+            { pid::ampRelease, 2.10139f }, { pid::osc2Sync, 1 }, { pid::filterCutoff, 1687.938f },
+            { pid::filterResonance, 0.435f }, { pid::filterKeyTrack, 0.86f }, { pid::filterDrive, 0.838f },
+            { pid::filterEnvAmount, 0.3f }, { pid::filtDecay, 8.40314f }, { pid::filtSustain, 0.867f },
+            { pid::auxAttack, 0.001f }, { pid::auxDecay, 0.01294f }, { pid::auxSustain, 0 },
+            { pid::distType, 1 }, { pid::distDrive, 0.213f }, { pid::chorusOn, 1 },
+            { pid::chorusMix, 0.35f }, { pid::delayTime, 499.1984f }, { pid::delayFeedback, 0.626f },
+            { pid::delayPingpong, 1 }, { pid::reverbOn, 1 }, { pid::reverbSize, 0.897f },
+            { pid::reverbDamping, 0.152f }, { pid::reverbMix, 0.097f }, { pid::arpMode, 2 },
+            { pid::arpOctaves, 2 }, { pid::arpLatch, 1 }, { pid::unisonCount, 3 },
+            { pid::unisonDetune, 15.2f }, { pid::stereoWidth, 2 }, { pid::eqOn, 1 },
+            { pid::oscWave[0], 2 }, { pid::oscOctave[0], 1 }, { pid::oscWave[1], 2 },
+            { pid::oscOctave[1], 1 }, { pid::oscLevel[1], 0.917f }, { pid::oscPW[1], 0.598f },
+            { pid::modSourceId (0), 3 }, { pid::modDestId (0), 2 }, { pid::modDepthId (0), 1 },
+            { pid::eqFreq[3], 906.027f }, { pid::eqGain[3], 0.4f }, { pid::eqFreq[6], 6579.26f },
+            { pid::eqGain[6], 17.4f } } });
+
         return presets;
     }
 }
