@@ -178,6 +178,56 @@ namespace pike::gui
     };
 
     //==============================================================================
+    /** One EQ band column: glass panel with a band title + Gain/Freq/Q knobs. */
+    class EqBandPanel : public juce::Component
+    {
+    public:
+        EqBandPanel (juce::AudioProcessorValueTreeState& state, int band)
+            : title (band == 0 ? "LOW" : band == 7 ? "HIGH" : "BAND " + juce::String (band + 1))
+        {
+            gain = std::make_unique<Control> (state, CtrlSpec { CtrlType::Knob, pid::eqGain[band], "Gain" });
+            freq = std::make_unique<Control> (state, CtrlSpec { CtrlType::Knob, pid::eqFreq[band], "Freq" });
+            q    = std::make_unique<Control> (state, CtrlSpec { CtrlType::Knob, pid::eqQ[band],    "Q" });
+            for (auto* c : { gain.get(), freq.get(), q.get() })
+                addAndMakeVisible (*c);
+        }
+
+        static constexpr int titleH = 18;
+
+        void paint (juce::Graphics& g) override
+        {
+            auto b = getLocalBounds().toFloat().reduced (2.5f);
+            fillGlassPanel (g, b, 5.0f);
+
+            auto titleBar = b.removeFromTop ((float) titleH);
+            g.setColour (juce::Colour (0xffe8f4ff));
+            g.setFont (hudFont (10.0f));
+            g.drawText (title, titleBar, juce::Justification::centred, false);
+            juce::ColourGradient underline (theme::accent.withAlpha (0.0f),  b.getX() + 8.0f, 0.0f,
+                                            theme::accent.withAlpha (0.45f), b.getCentreX(), 0.0f, false);
+            underline.addColour (1.0, theme::accent.withAlpha (0.0f));
+            g.setGradientFill (underline);
+            g.fillRect (b.getX() + 8.0f, titleBar.getBottom(), b.getWidth() - 16.0f, 1.0f);
+        }
+
+        void resized() override
+        {
+            auto r = getLocalBounds().reduced (4);
+            r.removeFromTop (titleH);
+            const int rh = r.getHeight() / 3;
+            gain->setBounds (r.removeFromTop (rh));
+            freq->setBounds (r.removeFromTop (rh));
+            q->setBounds (r);
+        }
+
+    private:
+        juce::String title;
+        std::unique_ptr<Control> gain, freq, q;
+
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (EqBandPanel)
+    };
+
+    //==============================================================================
     class MixEqPage : public juce::Component
     {
     public:
@@ -192,11 +242,7 @@ namespace pike::gui
             addAndMakeVisible (*display);
 
             for (int b = 0; b < 8; ++b)
-            {
-                addAndMakeVisible (gain.add (new Control (state, { CtrlType::Knob, pid::eqGain[b], "G" + juce::String (b + 1) })));
-                addAndMakeVisible (freq.add (new Control (state, { CtrlType::Knob, pid::eqFreq[b], "Freq" })));
-                addAndMakeVisible (q.add    (new Control (state, { CtrlType::Knob, pid::eqQ[b],    "Q" })));
-            }
+                addAndMakeVisible (bands.add (new EqBandPanel (state, b)));
         }
 
         void paint (juce::Graphics& g) override
@@ -228,24 +274,19 @@ namespace pike::gui
             area.removeFromTop (pad + 14);
             bandTop = area;
 
-            // 8 columns x 3 rows (Gain / Freq / Q).
+            // 8 band panels side by side (each: title + Gain / Freq / Q).
             const int cols = 8;
             const int cw = area.getWidth() / cols;
-            const int rh = juce::jmin (84, area.getHeight() / 3);
+            const int h  = juce::jmin (EqBandPanel::titleH + 8 + 3 * 84, area.getHeight());
             for (int b = 0; b < cols; ++b)
-            {
-                const int x = area.getX() + b * cw;
-                gain[b]->setBounds (x, area.getY(),          cw, rh);
-                freq[b]->setBounds (x, area.getY() + rh,     cw, rh);
-                q[b]   ->setBounds (x, area.getY() + 2 * rh, cw, rh);
-            }
+                bands[b]->setBounds (area.getX() + b * cw, area.getY(), cw, h);
         }
 
     private:
-        std::unique_ptr<Group>     master;
-        std::unique_ptr<EqDisplay> display;
-        juce::OwnedArray<Control>  gain, freq, q;
-        juce::Rectangle<int>       bandTop;
+        std::unique_ptr<Group>       master;
+        std::unique_ptr<EqDisplay>   display;
+        juce::OwnedArray<EqBandPanel> bands;
+        juce::Rectangle<int>         bandTop;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MixEqPage)
     };
