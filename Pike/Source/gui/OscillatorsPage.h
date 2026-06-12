@@ -47,12 +47,12 @@ namespace pike::gui
             auto b = getLocalBounds().toFloat().reduced (2.5f);
             fillGlassPanel (g, b, 6.0f);
 
-            const juce::Colour accent { 0xff4d9eff };
             auto titleBar = b.removeFromTop (22.0f);
-            g.setColour (accent);
+            g.setColour (theme::accent);
             g.fillRoundedRectangle (titleBar.getX() + 8.0f, titleBar.getY() + 6.0f, 3.0f, titleBar.getHeight() - 9.0f, 1.5f);
-            g.setFont (juce::Font (13.0f, juce::Font::bold));
-            g.drawText ("Osc " + juce::String (index + 1), titleBar.withTrimmedLeft (16), juce::Justification::centredLeft, false);
+            g.setColour (juce::Colour (0xffe8f4ff));
+            g.setFont (hudFont (12.0f));
+            g.drawText ("OSC " + juce::String (index + 1), titleBar.withTrimmedLeft (16), juce::Justification::centredLeft, false);
         }
 
         void resized() override

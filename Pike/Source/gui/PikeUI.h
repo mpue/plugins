@@ -48,7 +48,7 @@ namespace pike::gui
         parent's paint() (before children paint) so the glow shows in the gaps. */
     inline void paintPanelShadows (juce::Graphics& g, juce::Component& parent)
     {
-        const juce::Colour glow (0xff4d9eff);
+        const juce::Colour glow (0xffff9425);
 
         for (auto* c : parent.getChildren())
         {
@@ -180,22 +180,24 @@ namespace pike::gui
 
         void paint (juce::Graphics& g) override
         {
-            const juce::Colour accent { 0xff4d9eff };
             auto b = getLocalBounds().toFloat().reduced (2.5f);
 
             // Glossy glass panel (the parent draws the drop shadow behind us).
             fillGlassPanel (g, b, 5.0f);
 
-            // Title with accent tab + underline.
+            // HUD title: accent tab, uppercase letterspaced text, tapered underline.
             auto titleBar = b.removeFromTop ((float) layout::titleH);
-            g.setColour (accent);
+            g.setColour (theme::accent);
             g.fillRoundedRectangle (titleBar.getX() + 8.0f, titleBar.getY() + 6.0f,
                                     3.0f, titleBar.getHeight() - 9.0f, 1.5f);
-            g.setFont (juce::Font (13.0f, juce::Font::bold));
-            g.drawText (title, titleBar.withTrimmedLeft (16).withTrimmedRight (8),
+            g.setColour (juce::Colour (0xffe8f4ff));
+            g.setFont (hudFont (12.0f));
+            g.drawText (title.toUpperCase(), titleBar.withTrimmedLeft (16).withTrimmedRight (8),
                         juce::Justification::centredLeft, false);
-            g.setColour (accent.withAlpha (0.22f));
-            g.drawLine (b.getX() + 10.0f, titleBar.getBottom(), b.getRight() - 10.0f, titleBar.getBottom(), 1.0f);
+            juce::ColourGradient underline (theme::accent.withAlpha (0.55f), b.getX() + 10.0f, 0.0f,
+                                            theme::accent.withAlpha (0.0f),  b.getRight() - 10.0f, 0.0f, false);
+            g.setGradientFill (underline);
+            g.fillRect (b.getX() + 10.0f, titleBar.getBottom(), b.getWidth() - 20.0f, 1.0f);
         }
 
         void resized() override
@@ -274,6 +276,9 @@ namespace pike::gui
                                      juce::Colour (0xff0b0e13), 0.0f, (float) getHeight(), false);
             g.setGradientFill (bg);
             g.fillAll();
+
+            // Faint holographic grid behind the panels.
+            drawHoloGrid (g, getLocalBounds().toFloat());
 
             paintPanelShadows (g, *this);
         }

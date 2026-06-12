@@ -208,9 +208,9 @@ namespace pike::gui
             paintPanelShadows (g, *this);
 
             // Subtle "EQ" caption above the band grid.
-            g.setColour (juce::Colour (0xff4d9eff));
-            g.setFont (juce::Font (12.0f, juce::Font::bold));
-            g.drawText ("8-Band Parametric EQ", bandTop.translated (4, -16).withHeight (14),
+            g.setColour (theme::accent);
+            g.setFont (hudFont (11.0f));
+            g.drawText ("8-BAND PARAMETRIC EQ", bandTop.translated (4, -16).withHeight (14),
                         juce::Justification::bottomLeft, false);
         }
 

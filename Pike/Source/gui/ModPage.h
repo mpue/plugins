@@ -59,9 +59,9 @@ namespace pike::gui
             auto b = getLocalBounds().toFloat().reduced (2.5f);
             fillGlassPanel (g, b, 5.0f);
 
-            g.setColour (juce::Colour (0xff4d9eff));
-            g.setFont (juce::Font (13.0f, juce::Font::bold));
-            g.drawText ("Modulation Matrix", b.reduced (12, 5).removeFromTop (15),
+            g.setColour (theme::accent);
+            g.setFont (hudFont (12.0f));
+            g.drawText ("MODULATION MATRIX", b.reduced (12, 5).removeFromTop (15),
                         juce::Justification::topLeft, false);
 
             // Column headers aligned to the control columns.

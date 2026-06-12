@@ -30,7 +30,7 @@ namespace pike::gui
 
         void paint (juce::Graphics& g) override
         {
-            const juce::Colour accent { 0xff4d9eff };
+            const juce::Colour accent { 0xffff9425 };
             const float blink = 0.35f + 0.35f * std::sin (phase);
 
             for (auto& wp : widgets)
