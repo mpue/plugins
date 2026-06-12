@@ -452,6 +452,47 @@ namespace pike
                     .withStringFromValueFunction ([] (float v, int) { return juce::String (juce::roundToInt (v * 100.0f)) + " %"; })));
         }
 
+        //======================================================================
+        // Mix / EQ — 8-band parametric EQ
+        {
+            layout.add (std::make_unique<juce::AudioParameterBool> (
+                ID { pid::eqOn, pid::version }, "EQ On", false));
+
+            const float defFreq[8] = { 60.0f, 200.0f, 500.0f, 1000.0f, 2000.0f, 4000.0f, 8000.0f, 14000.0f };
+            const float defQ[8]    = { 0.7f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.7f };
+
+            Range freqRange (20.0f, 20000.0f);  freqRange.setSkewForCentre (1000.0f);
+            Range qRange    (0.1f, 10.0f);      qRange.setSkewForCentre (1.0f);
+
+            auto hzText = [] (float v, int)
+            {
+                return v >= 1000.0f ? juce::String (v / 1000.0f, 2) + " kHz" : juce::String (v, 0) + " Hz";
+            };
+
+            for (int b = 0; b < 8; ++b)
+            {
+                const auto label = "EQ " + juce::String (b + 1) + " ";
+
+                layout.add (std::make_unique<APF> (
+                    ID { pid::eqFreq[b], pid::version }, label + "Freq",
+                    freqRange, defFreq[b],
+                    juce::AudioParameterFloatAttributes().withLabel ("Hz").withStringFromValueFunction (hzText)));
+
+                layout.add (std::make_unique<APF> (
+                    ID { pid::eqGain[b], pid::version }, label + "Gain",
+                    Range (-24.0f, 24.0f, 0.1f), 0.0f,
+                    juce::AudioParameterFloatAttributes()
+                        .withLabel ("dB")
+                        .withStringFromValueFunction ([] (float v, int) { return juce::String (v, 1) + " dB"; })));
+
+                layout.add (std::make_unique<APF> (
+                    ID { pid::eqQ[b], pid::version }, label + "Q",
+                    qRange, defQ[b],
+                    juce::AudioParameterFloatAttributes()
+                        .withStringFromValueFunction ([] (float v, int) { return juce::String (v, 2); })));
+            }
+        }
+
         return layout;
     }
 }

@@ -16,8 +16,10 @@
 #include "ElegantDarkLookAndFeel.h"
 #include "gui/PikeUI.h"
 #include "gui/Visualisers.h"
+#include "gui/OscillatorsPage.h"
 #include "gui/FilterEnvPage.h"
 #include "gui/ModPage.h"
+#include "gui/MixEqPage.h"
 
 //==============================================================================
 /** All UI laid out at a fixed design size; the editor scales this component. */

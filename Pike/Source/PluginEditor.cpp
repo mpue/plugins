@@ -23,41 +23,6 @@ namespace
     CtrlSpec T (juce::String id, juce::String name) { return { CtrlType::Toggle, std::move (id), std::move (name) }; }
 
     //--------------------------------------------------------------------------
-    std::vector<GroupSpec> oscPage()
-    {
-        std::vector<GroupSpec> g;
-
-        // Osc 1, Osc 2, then Master (top-right), then Osc 3 + Routing.
-        for (int n = 0; n < 2; ++n)
-            g.push_back ({ "Osc " + juce::String (n + 1),
-                           { C (pid::oscWave[n],   "Wave"),
-                             K (pid::oscOctave[n], "Oct"),
-                             K (pid::oscSemi[n],   "Semi"),
-                             K (pid::oscFine[n],   "Fine"),
-                             K (pid::oscLevel[n],  "Level"),
-                             K (pid::oscPW[n],     "PW"),
-                             K (pid::oscWtPos[n],  "WT Pos") } });
-
-        g.push_back ({ "Master", { K (pid::masterGain, "Gain") } });
-
-        g.push_back ({ "Osc 3",
-                       { C (pid::oscWave[2],   "Wave"),
-                         K (pid::oscOctave[2], "Oct"),
-                         K (pid::oscSemi[2],   "Semi"),
-                         K (pid::oscFine[2],   "Fine"),
-                         K (pid::oscLevel[2],  "Level"),
-                         K (pid::oscPW[2],     "PW"),
-                         K (pid::oscWtPos[2],  "WT Pos") } });
-
-        g.push_back ({ "Routing / Mixer",
-                       { T (pid::osc2Sync,     "Sync 2"),
-                         T (pid::osc3Sync,     "Sync 3"),
-                         K (pid::fmAmount,     "FM 3>1"),
-                         K (pid::ringModLevel, "Ring 1x2"),
-                         K (pid::noiseLevel,   "Noise") } });
-        return g;
-    }
-
     std::vector<GroupSpec> fxPage()
     {
         return {
@@ -100,10 +65,11 @@ PikeContent::PikeContent (PikeAudioProcessor& p) : audioProcessor (p)
     addAndMakeVisible (tabs);
 
     const auto tabColour = juce::Colour (0xff141820);
-    tabs.addTab ("Oscillators",  tabColour, new Page (apvts, oscPage()),                                       true);
+    tabs.addTab ("Oscillators",  tabColour, new OscillatorsPage (apvts),                                       true);
     tabs.addTab ("Filter / Env", tabColour, new FilterEnvPage (apvts, audioProcessor.getVisualState()),        true);
     tabs.addTab ("Mod",          tabColour, new ModPage (apvts),                                               true);
     tabs.addTab ("FX",           tabColour, new Page (apvts, fxPage()),                                        true);
+    tabs.addTab ("Mix / EQ",     tabColour, new MixEqPage (apvts),                                             true);
     tabs.addTab ("Arp / Voice",  tabColour, new Page (apvts, arpVoicePage()),                                  true);
 
     // Preset bar.
