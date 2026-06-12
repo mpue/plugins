@@ -74,7 +74,7 @@ public:
     /** MIDI Learn (CC -> parameter mappings). */
     pike::MidiLearnManager& getMidiLearn() noexcept { return midiLearn; }
 
-    static constexpr int numVoices = 8;
+    static constexpr int numVoices = 24;
 
 private:
     //==============================================================================

@@ -44,19 +44,26 @@ namespace pike::gui
         constexpr int maxCols = 4;
     }
 
-    /** Draws a soft drop shadow behind each visible child panel. Call from the
-        parent's paint() (before children paint) so the shadow shows in the gaps. */
+    /** Draws a subtle blue glow behind each visible child panel. Call from the
+        parent's paint() (before children paint) so the glow shows in the gaps. */
     inline void paintPanelShadows (juce::Graphics& g, juce::Component& parent)
     {
+        const juce::Colour glow (0xff4d9eff);
+
         for (auto* c : parent.getChildren())
         {
             if (c == nullptr || ! c->isVisible())
                 continue;
 
-            juce::DropShadow ds (juce::Colours::black.withAlpha (0.55f), 12, { 0, 5 });
             juce::Path p;
             p.addRoundedRectangle (c->getBounds().toFloat().reduced (2.5f), 7.0f);
-            ds.drawForPath (g, p);
+
+            // Wide, very soft halo + a tighter, brighter rim glow that hugs
+            // the panel edge so it reads as a lit edge, not a vague cloud.
+            juce::DropShadow outer (glow.withAlpha (0.20f), 20, { 0, 0 });
+            juce::DropShadow inner (glow.withAlpha (0.45f),  5, { 0, 0 });
+            outer.drawForPath (g, p);
+            inner.drawForPath (g, p);
         }
     }
 

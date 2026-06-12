@@ -46,10 +46,11 @@ namespace pike::gui
         g.setColour (juce::Colours::white.withAlpha (0.45f));
         g.drawLine (b.getX() + corner, b.getY() + 1.0f, b.getRight() - corner, b.getY() + 1.0f, 1.0f);
 
-        // Bevel border: dark outer line + subtle light inner line.
+        // Bevel border: dark outer line + a faintly blue-lit inner line that
+        // ties the panel edge to the surrounding glow.
         g.setColour (juce::Colours::black.withAlpha (0.6f));
         g.drawRoundedRectangle (b, corner, 1.2f);
-        g.setColour (juce::Colour (0xff464e5e).withAlpha (0.8f));
+        g.setColour (juce::Colour (0xff4d9eff).withAlpha (0.35f));
         g.drawRoundedRectangle (b.reduced (1.2f), juce::jmax (1.0f, corner - 1.0f), 1.0f);
     }
 }

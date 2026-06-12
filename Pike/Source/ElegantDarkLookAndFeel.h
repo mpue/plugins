@@ -504,94 +504,123 @@ public:
         return juce::Font(14.0f);
     }
 
-    // Besseres PopupMenu Styling
+    // Glass-styled popup menu background to match the panels.
     void drawPopupMenuBackground(juce::Graphics& g, int width, int height) override
     {
-        g.fillAll(findColour(juce::PopupMenu::backgroundColourId));
+        juce::Rectangle<float> b (0.0f, 0.0f, (float) width, (float) height);
 
-        g.setColour(findColour(juce::PopupMenu::textColourId).withAlpha(0.1f));
-        g.drawRect(0, 0, width, height);
+        juce::ColourGradient body (juce::Colour (0xff2b313d), 0.0f, 0.0f,
+                                   juce::Colour (0xff171c24), 0.0f, (float) height, false);
+        g.setGradientFill (body);
+        g.fillRect (b);
+
+        // Thin polished glint along the top edge.
+        g.setColour (juce::Colours::white.withAlpha (0.18f));
+        g.drawHorizontalLine (0, 0.0f, (float) width);
+
+        // Bevel border: dark outer + faint blue inner, like the glass panels.
+        g.setColour (juce::Colours::black.withAlpha (0.6f));
+        g.drawRect (b, 1.0f);
+        g.setColour (juce::Colour (0xff4d9eff).withAlpha (0.30f));
+        g.drawRect (b.reduced (1.0f), 1.0f);
     }
 
 
-    /*void drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int>& area,
+    void drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int>& area,
         bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu,
         const juce::String& text, const juce::String& shortcutKeyText,
         const juce::Drawable* icon, const juce::Colour* textColour) override
     {
         if (isSeparator)
         {
-            auto r = area.reduced(5, 0);
-            r.removeFromTop(r.getHeight() / 2);
-            g.setColour(findColour(juce::PopupMenu::textColourId).withAlpha(0.3f));
-            g.fillRect(r.removeFromTop(1));
+            auto r = area.reduced (8, 0);
+            r.removeFromTop (r.getHeight() / 2);
+            g.setColour (juce::Colour (0xff4d9eff).withAlpha (0.25f));
+            g.fillRect (r.removeFromTop (1));
+            return;
         }
-        else
+
+        auto textCol = (textColour != nullptr ? *textColour
+                                              : findColour (juce::PopupMenu::textColourId));
+
+        auto r = area.reduced (3, 1);
+
+        // Rounded blue highlight pill on the active item.
+        if (isHighlighted && isActive)
         {
-            auto textColourToUse = (textColour == nullptr ? findColour(juce::PopupMenu::textColourId) : *textColour);
-
-            if (isHighlighted)
-            {
-                g.setColour(findColour(juce::PopupMenu::highlightedBackgroundColourId));
-                g.fillRect(area.reduced(1));
-                g.setColour(findColour(juce::PopupMenu::highlightedTextColourId));
-            }
-            else
-            {
-                g.setColour(textColourToUse);
-            }
-
-            if (!isActive)
-                g.setOpacity(0.3f);
-
-            juce::Font font(getPopupMenuFont());
-            auto maxFontHeight = (float)area.getHeight() / 1.3f;
-
-            if (font.getHeight() > maxFontHeight)
-                font.setHeight(maxFontHeight);
-
-            g.setFont(font);
-
-            auto& iconArea = area.removeFromLeft(static_cast<int>(area.getHeight())).reduced(3).toFloat();
-
-            if (icon != nullptr)
-            {
-                icon->drawWithin(g, iconArea, juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize, 1.0f);
-            }
-            else if (isTicked)
-            {
-                auto tick = getTickShape(1.0f);
-                g.fillPath(tick, tick.getTransformToScaleToFit(iconArea.reduced(iconArea.getWidth() / 5, 0).toFloat(), true));
-            }
-
-            if (hasSubMenu)
-            {
-                auto arrowH = 0.6f * getPopupMenuFont().getAscent();
-                auto x = static_cast<float>(area.getRight() - area.getHeight());
-                auto halfH = static_cast<float>(area.getHeight()) * 0.5f;
-
-                juce::Path path;
-                path.startNewSubPath(x, halfH - arrowH * 0.5f);
-                path.lineTo(x + arrowH * 0.6f, halfH);
-                path.lineTo(x, halfH + arrowH * 0.5f);
-
-                g.strokePath(path, juce::PathStrokeType(2.0f));
-            }
-
-            auto r = area.reduced(iconArea.getWidth(), 0);
-
-            if (!shortcutKeyText.isEmpty())
-            {
-                auto f2 = font;
-                f2.setHeight(f2.getHeight() * 0.75f);
-                f2.setHorizontalScale(0.95f);
-                g.setFont(f2);
-
-                g.drawText(shortcutKeyText, r, juce::Justification::centredRight, true);
-            }
-
-            g.setFont(font);
-            g.drawFittedText(text, r.reduced(2, 0), juce::Justification::centredLeft, 1);
+            g.setColour (findColour (juce::PopupMenu::highlightedBackgroundColourId).withAlpha (0.9f));
+            g.fillRoundedRectangle (r.toFloat(), 4.0f);
+            textCol = findColour (juce::PopupMenu::highlightedTextColourId);
         }
-    }*/
+
+        if (! isActive)
+            textCol = textCol.withMultipliedAlpha (0.4f);
+
+        auto font = getPopupMenuFont();
+        g.setFont (font);
+        g.setColour (textCol);
+
+        auto iconArea = r.removeFromLeft (juce::roundToInt (area.getHeight() * 0.7f)).toFloat();
+
+        if (icon != nullptr)
+        {
+            icon->drawWithin (g, iconArea, juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize, 1.0f);
+        }
+        else if (isTicked)
+        {
+            auto tick = getTickShape (1.0f);
+            g.fillPath (tick, tick.getTransformToScaleToFit (iconArea.reduced (iconArea.getWidth() / 4, iconArea.getHeight() / 4), true));
+        }
+
+        if (hasSubMenu)
+        {
+            auto arrowH = 0.6f * font.getAscent();
+            auto x = (float) r.getRight() - arrowH;
+            auto halfH = (float) area.getCentreY();
+
+            juce::Path path;
+            path.startNewSubPath (x, halfH - arrowH * 0.5f);
+            path.lineTo (x + arrowH * 0.5f, halfH);
+            path.lineTo (x, halfH + arrowH * 0.5f);
+            g.strokePath (path, juce::PathStrokeType (2.0f));
+
+            r.removeFromRight (juce::roundToInt (arrowH));
+        }
+
+        if (shortcutKeyText.isNotEmpty())
+        {
+            auto f2 = font.withHeight (font.getHeight() * 0.75f);
+            g.setFont (f2);
+            g.drawText (shortcutKeyText, r, juce::Justification::centredRight, true);
+            g.setFont (font);
+        }
+
+        g.drawFittedText (text, r.reduced (4, 0), juce::Justification::centredLeft, 1);
+    }
+
+    // Glass-styled alert box so the "Save Preset" dialog matches the theme.
+    void drawAlertBox (juce::Graphics& g, juce::AlertWindow& alert,
+                       const juce::Rectangle<int>& textArea, juce::TextLayout& textLayout) override
+    {
+        auto bounds = alert.getLocalBounds().toFloat();
+
+        juce::ColourGradient body (juce::Colour (0xff2b313d), bounds.getX(), bounds.getY(),
+                                   juce::Colour (0xff0d1117), bounds.getX(), bounds.getBottom(), false);
+        g.setGradientFill (body);
+        g.fillRect (bounds);
+
+        // Polished top glint.
+        g.setColour (juce::Colours::white.withAlpha (0.25f));
+        g.drawHorizontalLine (0, bounds.getX(), bounds.getRight());
+
+        // Message text.
+        g.setColour (alert.findColour (juce::AlertWindow::textColourId));
+        textLayout.draw (g, textArea.toFloat());
+
+        // Bevel border: dark outer + faint blue inner.
+        g.setColour (juce::Colours::black.withAlpha (0.6f));
+        g.drawRect (bounds, 1.0f);
+        g.setColour (juce::Colour (0xff4d9eff).withAlpha (0.40f));
+        g.drawRect (bounds.reduced (1.0f), 1.0f);
+    }
 };
