@@ -20,7 +20,7 @@ namespace pike::gui
 {
     namespace col
     {
-        const juce::Colour accent { 0xff4d9eff };
+        const juce::Colour accent { 0xffff9425 };
         const juce::Colour panel  { 0xff181b22 };
         const juce::Colour line    { 0xff404040 };
     }
@@ -70,9 +70,9 @@ namespace pike::gui
             g.fillRoundedRectangle (r, 2.0f);
 
             auto fill = r.withTop (r.getBottom() - v * r.getHeight());
-            juce::ColourGradient grad (juce::Colour (0xff2a8cff), r.getX(), r.getBottom(),
+            juce::ColourGradient grad (juce::Colour (0xffff9425), r.getX(), r.getBottom(),
                                        juce::Colour (0xffff4d4d), r.getX(), r.getY(), false);
-            grad.addColour (0.7, juce::Colour (0xff4de2ff));
+            grad.addColour (0.7, juce::Colour (0xffffc44d));
             grad.addColour (0.85, juce::Colour (0xffe2ff4d));
             g.setGradientFill (grad);
             g.fillRoundedRectangle (fill, 2.0f);

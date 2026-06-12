@@ -244,13 +244,18 @@ void PikeContent::showSaveDialog()
 //==============================================================================
 void PikeContent::paint (juce::Graphics& g)
 {
-    g.fillAll (juce::Colour (0xff0b0e13));
+    const auto accent = theme::accent;
+
+    g.fillAll (theme::bgDeep);
 
     auto header = getLocalBounds().removeFromTop (kHeaderHeight).toFloat();
     juce::ColourGradient grad (juce::Colour (0xff232a35), header.getX(), header.getY(),
                                juce::Colour (0xff0d1117), header.getX(), header.getBottom(), false);
     g.setGradientFill (grad);
     g.fillRect (header);
+
+    // Faint holo grid inside the header band.
+    drawHoloGrid (g, header, 13.0f, accent.withAlpha (0.04f));
 
     auto glint = header.withHeight (5.0f);
     juce::ColourGradient gloss (juce::Colours::white.withAlpha (0.10f), glint.getX(), glint.getY(),
@@ -260,21 +265,36 @@ void PikeContent::paint (juce::Graphics& g)
 
     g.setColour (juce::Colours::white.withAlpha (0.35f));
     g.drawLine (header.getX(), header.getY() + 0.5f, header.getRight(), header.getY() + 0.5f, 1.0f);
-    g.setColour (juce::Colour (0xff4d9eff).withAlpha (0.7f));
+
+    // Bottom edge: neon line with a soft glow strip above it.
+    g.setColour (accent.withAlpha (0.18f));
+    g.fillRect (header.getX(), header.getBottom() - 5.0f, header.getWidth(), 4.0f);
+    g.setColour (accent.withAlpha (0.85f));
     g.drawLine (header.getX(), header.getBottom() - 1.0f, header.getRight(), header.getBottom() - 1.0f, 2.0f);
 
-    auto text = header.reduced (16.0f, 0.0f).withWidth (220.0f);
-    g.setColour (juce::Colours::white);
-    g.setFont (juce::Font (26.0f, juce::Font::bold));
-    g.drawText ("PIKE", text.removeFromLeft (96.0f), juce::Justification::centredLeft, false);
+    // Title block: glowing PIKE wordmark + telemetry-style readout.
+    auto text = header.reduced (16.0f, 0.0f).withWidth (250.0f);
+    auto mark = text.removeFromLeft (104.0f);
 
-    g.setColour (juce::Colour (0xff8a93a6));
-    g.setFont (juce::Font (11.0f));
-    g.drawText ("Polyphonic Hybrid", text.removeFromTop (header.getHeight() * 0.5f).reduced (0, 6),
+    g.setColour (accent.withAlpha (0.30f));                 // glow pass behind the wordmark
+    g.setFont (hudFont (27.0f).withExtraKerningFactor (0.18f));
+    for (auto off : { juce::Point<float> (0.0f, 1.5f), juce::Point<float> (1.5f, 0.0f),
+                      juce::Point<float> (0.0f, -1.5f), juce::Point<float> (-1.5f, 0.0f) })
+        g.drawText ("PIKE", mark.translated (off.x, off.y), juce::Justification::centredLeft, false);
+
+    g.setColour (juce::Colours::white);
+    g.drawText ("PIKE", mark, juce::Justification::centredLeft, false);
+
+    g.setColour (theme::textDim);
+    g.setFont (hudFont (10.0f, false));
+    g.drawText ("POLYPHONIC HYBRID", text.removeFromTop (header.getHeight() * 0.5f).reduced (0, 6),
                 juce::Justification::bottomLeft, false);
-    g.setColour (juce::Colour (0xff4d9eff));
-    g.setFont (juce::Font (10.0f, juce::Font::bold));
-    g.drawText ("Synthesizer  v" JucePlugin_VersionString, text, juce::Justification::topLeft, false);
+    g.setColour (accent);
+    g.setFont (hudFont (9.0f));
+    g.drawText ("SYNTHESIZER // V" JucePlugin_VersionString, text, juce::Justification::topLeft, false);
+
+    // HUD corner brackets framing the whole plugin face.
+    drawCornerBrackets (g, getLocalBounds().toFloat().reduced (2.0f), accent.withAlpha (0.55f), 14.0f, 1.5f);
 }
 
 void PikeContent::resized()
