@@ -284,6 +284,32 @@ namespace pike
         }
 
         //======================================================================
+        // MSEGs — multi-segment envelopes (time base only; points live in
+        // MsegStore's ValueTree). Version hint 2: added after first release.
+        {
+            const juce::StringArray msegDivisions { "1/16", "1/8", "1/4", "1/2", "1 Bar", "2 Bars", "4 Bars" };
+
+            for (int n = 0; n < pid::numMsegs; ++n)
+            {
+                const auto label = "MSEG " + juce::String (n + 1) + " ";
+
+                layout.add (std::make_unique<juce::AudioParameterBool> (
+                    ID { pid::msegSync[n], 2 }, label + "Sync", false));
+
+                layout.add (std::make_unique<APF> (
+                    ID { pid::msegRate[n], 2 }, label + "Time",
+                    timeRange (0.05f, 20.0f, 1.0f), 1.0f,
+                    juce::AudioParameterFloatAttributes().withStringFromValueFunction (secondsText)));
+
+                layout.add (std::make_unique<juce::AudioParameterChoice> (
+                    ID { pid::msegDiv[n], 2 }, label + "Length", msegDivisions, 4));
+
+                layout.add (std::make_unique<juce::AudioParameterBool> (
+                    ID { pid::msegLoop[n], 2 }, label + "Loop", false));
+            }
+        }
+
+        //======================================================================
         // Modulation matrix
         {
             const auto sources = mod::sourceNames();

@@ -55,6 +55,10 @@ namespace pike
 
         const juce::String& getCurrentName() const noexcept { return currentName; }
 
+        /** Resets non-parameter state (e.g. MSEG point data) alongside the
+            parameters when a factory preset loads. Set by the processor. */
+        std::function<void()> onResetNonParamState;
+
         //======================================================================
         void loadFactory (int index)
         {
@@ -62,6 +66,8 @@ namespace pike
                 return;
 
             resetToDefaults();
+            if (onResetNonParamState != nullptr)
+                onResetNonParamState();
             for (const auto& v : factory[(size_t) index].values)
                 if (auto* p = apvts.getParameter (v.first))
                     p->setValueNotifyingHost (p->convertTo0to1 (v.second));

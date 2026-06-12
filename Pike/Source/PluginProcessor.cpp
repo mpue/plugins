@@ -30,6 +30,8 @@ PikeAudioProcessor::PikeAudioProcessor()
 {
     cacheParameterPointers();
 
+    presetManager.onResetNonParamState = [this] { msegStore.resetAll(); };
+
     synth.addSound (new pike::PikeSound());
     for (int i = 0; i < numVoices; ++i)
         synth.addVoice (new pike::PikeVoice (voiceParameters));
@@ -103,6 +105,14 @@ void PikeAudioProcessor::cacheParameterPointers()
         slot.depth  = apvts.getRawParameterValue (pid::modDepthId (s));
     }
 
+    for (int m = 0; m < pike::mseg::maxMsegs; ++m)
+    {
+        auto& mp = voiceParameters.msegs[m];
+        mp.data = &msegAudio[m];
+        mp.inc  = &msegIncShared[m];
+        mp.loop = apvts.getRawParameterValue (pid::msegLoop[m]);
+    }
+
     voiceParameters.wavetable = &wavetable;
 }
 
@@ -154,6 +164,29 @@ void PikeAudioProcessor::updateModulationRuntime (const juce::MidiBuffer& midi, 
 
         lfoMonoPhaseAccum[l] += inc * numSamples;
         lfoMonoPhaseAccum[l] -= std::floor (lfoMonoPhaseAccum[l]);
+    }
+
+    // MSEG total lengths: "1/16".."4 Bars" in beats when synced, else seconds.
+    static constexpr double msegBeats[] = { 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0 };
+
+    for (int m = 0; m < pike::mseg::maxMsegs; ++m)
+    {
+        msegStore.shared[m].readIfChanged (msegAudio[m], msegSeqSeen[m]);
+
+        const bool sync = apvts.getRawParameterValue (pid::msegSync[m])->load() > 0.5f;
+        double seconds;
+        if (sync)
+        {
+            const int div = juce::jlimit (0, (int) std::size (msegBeats) - 1,
+                                          (int) apvts.getRawParameterValue (pid::msegDiv[m])->load());
+            seconds = msegBeats[div] * 60.0 / bpm;
+        }
+        else
+        {
+            seconds = apvts.getRawParameterValue (pid::msegRate[m])->load();
+        }
+
+        msegIncShared[m].store ((float) (1.0 / juce::jmax (1.0e-3, seconds * sr)));
     }
 }
 

@@ -14,6 +14,7 @@
 #include "synth/VoiceManager.h"
 #include "dsp/fx/FxChain.h"
 #include "dsp/fx/ParametricEQ.h"
+#include "params/MsegStore.h"
 #include "presets/PresetManager.h"
 #include "midi/MidiLearnManager.h"
 #include "gui/VisualState.h"
@@ -74,11 +75,15 @@ public:
     /** MIDI Learn (CC -> parameter mappings). */
     pike::MidiLearnManager& getMidiLearn() noexcept { return midiLearn; }
 
+    /** MSEG point data (message-side model, publishes audio snapshots). */
+    pike::MsegStore& getMsegStore() noexcept { return msegStore; }
+
     static constexpr int numVoices = 24;
 
 private:
     //==============================================================================
     juce::AudioProcessorValueTreeState apvts;
+    pike::MsegStore msegStore { apvts };
     pike::PresetManager presetManager { *this, apvts };
     pike::MidiLearnManager midiLearn { *this };
 
@@ -95,6 +100,11 @@ private:
     std::atomic<float> aftertouchShared      { 0.0f };
     double lfoMonoPhaseAccum[2] { 0.0, 0.0 };
     double currentBpm = 120.0;
+
+    // Audio-side MSEG snapshots, refreshed once per block from msegStore.
+    pike::mseg::Data msegAudio[pike::mseg::maxMsegs];
+    uint32_t msegSeqSeen[pike::mseg::maxMsegs] {};
+    std::atomic<float> msegIncShared[pike::mseg::maxMsegs] {};
 
     // Global post-mix effects.
     pike::FxChain fxChain;

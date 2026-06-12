@@ -20,6 +20,8 @@
         <FILE id="pkOscPg" name="OscillatorsPage.h" compile="0" resource="0" file="Source/gui/OscillatorsPage.h" />
         <FILE id="pkMixEq" name="MixEqPage.h" compile="0" resource="0" file="Source/gui/MixEqPage.h" />
         <FILE id="pkMlo01" name="MidiLearnOverlay.h" compile="0" resource="0" file="Source/gui/MidiLearnOverlay.h" />
+        <FILE id="pkMsgEd" name="MsegEditor.h" compile="0" resource="0" file="Source/gui/MsegEditor.h" />
+        <FILE id="pkMsgPg" name="MsegPage.h" compile="0" resource="0" file="Source/gui/MsegPage.h" />
       </GROUP>
       <GROUP id="pkMidi1" name="midi">
         <FILE id="pkMl01" name="MidiLearnManager.h" compile="0" resource="0" file="Source/midi/MidiLearnManager.h" />
@@ -33,6 +35,7 @@
         <FILE id="pkPlyH1" name="ParameterLayout.h" compile="0" resource="0" file="Source/params/ParameterLayout.h" />
         <FILE id="pkPlyC1" name="ParameterLayout.cpp" compile="1" resource="0" file="Source/params/ParameterLayout.cpp" />
         <FILE id="pkMmd01" name="ModMatrixDefs.h" compile="0" resource="0" file="Source/params/ModMatrixDefs.h" />
+        <FILE id="pkMsgSt" name="MsegStore.h" compile="0" resource="0" file="Source/params/MsegStore.h" />
       </GROUP>
       <GROUP id="pkDsp1" name="dsp">
         <FILE id="pkOsc01" name="Oscillator.h" compile="0" resource="0" file="Source/dsp/Oscillator.h" />
@@ -40,6 +43,7 @@
         <FILE id="pkNz01" name="Noise.h" compile="0" resource="0" file="Source/dsp/Noise.h" />
         <FILE id="pkFlt01" name="Filter.h" compile="0" resource="0" file="Source/dsp/Filter.h" />
         <FILE id="pkLfo01" name="Lfo.h" compile="0" resource="0" file="Source/dsp/Lfo.h" />
+        <FILE id="pkMsg01" name="Mseg.h" compile="0" resource="0" file="Source/dsp/Mseg.h" />
         <GROUP id="pkFx1" name="fx">
           <FILE id="pkDist01" name="Distortion.h" compile="0" resource="0" file="Source/dsp/fx/Distortion.h" />
           <FILE id="pkDly01" name="Delay.h" compile="0" resource="0" file="Source/dsp/fx/Delay.h" />

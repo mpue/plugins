@@ -27,6 +27,10 @@ namespace pike::mod
         ModWheel,
         Aftertouch,
         KeyTrack,
+        Mseg1,       // multi-segment envelopes (per-note, see dsp/Mseg.h)
+        Mseg2,
+        Mseg3,
+        Mseg4,
         Count
     };
 
@@ -55,8 +59,11 @@ namespace pike::mod
 
     inline juce::StringArray sourceNames()
     {
+        // Append-only: stored choice values are plain indices, so new sources
+        // must go at the end to keep existing sessions/presets valid.
         return { "None", "Env 1 (Amp)", "Env 2 (Filter)", "Env 3 (Aux)",
-                 "LFO 1", "LFO 2", "Velocity", "Mod Wheel", "Aftertouch", "Key Track" };
+                 "LFO 1", "LFO 2", "Velocity", "Mod Wheel", "Aftertouch", "Key Track",
+                 "MSEG 1", "MSEG 2", "MSEG 3", "MSEG 4" };
     }
 
     inline juce::StringArray destNames()

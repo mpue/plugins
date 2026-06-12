@@ -68,6 +68,7 @@ PikeContent::PikeContent (PikeAudioProcessor& p) : audioProcessor (p)
     tabs.addTab ("Oscillators",  tabColour, new OscillatorsPage (apvts),                                       true);
     tabs.addTab ("Filter / Env", tabColour, new FilterEnvPage (apvts, audioProcessor.getVisualState()),        true);
     tabs.addTab ("Mod",          tabColour, new ModPage (apvts),                                               true);
+    tabs.addTab ("MSEG",         tabColour, new MsegPage (apvts, audioProcessor.getMsegStore()),               true);
     tabs.addTab ("FX",           tabColour, new Page (apvts, fxPage()),                                        true);
     tabs.addTab ("Mix / EQ",     tabColour, new MixEqPage (apvts),                                             true);
     tabs.addTab ("Arp / Voice",  tabColour, new Page (apvts, arpVoicePage()),                                  true);

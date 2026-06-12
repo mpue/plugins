@@ -19,6 +19,7 @@
 #include "gui/OscillatorsPage.h"
 #include "gui/FilterEnvPage.h"
 #include "gui/ModPage.h"
+#include "gui/MsegPage.h"
 #include "gui/MixEqPage.h"
 #include "gui/MidiLearnOverlay.h"
 

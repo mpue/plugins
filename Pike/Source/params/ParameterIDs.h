@@ -82,6 +82,15 @@ namespace pid
     inline constexpr const char* lfoFade[2]    = { "lfo1Fade",    "lfo2Fade"    }; // fade-in seconds
 
     //==============================================================================
+    // MSEGs 1..4 (index 0..3) — multi-segment envelopes. Point data lives in a
+    // non-parameter ValueTree (see MsegStore.h); only the time base is automatable.
+    inline constexpr int numMsegs = 4;
+    inline constexpr const char* msegSync[numMsegs] = { "mseg1Sync", "mseg2Sync", "mseg3Sync", "mseg4Sync" }; // bool tempo-sync
+    inline constexpr const char* msegRate[numMsegs] = { "mseg1Rate", "mseg2Rate", "mseg3Rate", "mseg4Rate" }; // total length, seconds
+    inline constexpr const char* msegDiv[numMsegs]  = { "mseg1Div",  "mseg2Div",  "mseg3Div",  "mseg4Div"  }; // total length, beats (choice)
+    inline constexpr const char* msegLoop[numMsegs] = { "mseg1Loop", "mseg2Loop", "mseg3Loop", "mseg4Loop" }; // bool loop enable
+
+    //==============================================================================
     // Modulation matrix (16 slots). IDs built deterministically per slot.
     inline juce::String modSourceId (int slot) { return "mod" + juce::String (slot) + "Src"; }
     inline juce::String modDestId    (int slot) { return "mod" + juce::String (slot) + "Dst"; }

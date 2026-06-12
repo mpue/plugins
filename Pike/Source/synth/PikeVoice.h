@@ -25,6 +25,7 @@
 #include "../dsp/Noise.h"
 #include "../dsp/Filter.h"
 #include "../dsp/Lfo.h"
+#include "../dsp/Mseg.h"
 #include "../params/ModMatrixDefs.h"
 
 namespace pike
@@ -99,6 +100,13 @@ namespace pike
                 std::atomic<float>* dest   = nullptr;
                 std::atomic<float>* depth  = nullptr;
             } matrix[mod::numSlots];
+
+            struct MsegParams
+            {
+                const mseg::Data*   data = nullptr;   // processor-owned audio-side snapshot
+                std::atomic<float>* inc  = nullptr;   // phase increment per sample (block rate)
+                std::atomic<float>* loop = nullptr;   // loop enable
+            } msegs[mseg::maxMsegs];
 
             const Wavetable* wavetable = nullptr;
         };
@@ -186,6 +194,9 @@ namespace pike
                 lfos[l].noteOn (keySync);
             }
 
+            for (auto& m : msegPlayers)
+                m.noteOn();
+
             updateBlockParameters();
             ampEnvelope.noteOn();
             filterEnvelope.noteOn();
@@ -199,6 +210,8 @@ namespace pike
                 ampEnvelope.noteOff();
                 filterEnvelope.noteOff();
                 auxEnvelope.noteOff();
+                for (auto& m : msegPlayers)
+                    m.noteOff();
             }
             else
             {
@@ -267,6 +280,12 @@ namespace pike
                 src[(int) mod::Source::ModWheel]   = modWheelVal;
                 src[(int) mod::Source::Aftertouch] = aftertouchVal;
                 src[(int) mod::Source::KeyTrack]   = keyTrackSource;
+
+                for (int m = 0; m < mseg::maxMsegs; ++m)
+                    src[(int) mod::Source::Mseg1 + m] =
+                        msegActive[m] ? msegPlayers[m].process (*parameters.msegs[m].data,
+                                                                msegInc[m], msegLoopOn[m])
+                                      : 0.0f;
 
                 // ----- evaluate matrix -----
                 float dst[mod::numDests] = {};
@@ -420,6 +439,14 @@ namespace pike
                 lfoMonoPhase[l]   = parameters.lfo[l].monoPhase != nullptr ? parameters.lfo[l].monoPhase->load() : 0.0;
             }
 
+            for (int m = 0; m < mseg::maxMsegs; ++m)
+            {
+                const auto& mp = parameters.msegs[m];
+                msegInc[m]    = mp.inc != nullptr ? mp.inc->load() : 0.0;
+                msegLoopOn[m] = loadBool (mp.loop);
+                msegActive[m] = mp.data != nullptr && mp.data->numPoints >= 2;
+            }
+
             modWheelVal    = loadFloat (parameters.modWheel);
             aftertouchVal  = loadFloat (parameters.aftertouch);
             keyTrackSource = juce::jlimit (-1.0f, 1.0f, (float) (midiNote - 60) / 60.0f);
@@ -506,6 +533,12 @@ namespace pike
         float  lfoFadeSamples[numLfos] { 0.0f, 0.0f };
         double lfoInc[numLfos]         { 0.0, 0.0 };
         double lfoMonoPhase[numLfos]   { 0.0, 0.0 };
+
+        // Per-voice MSEG players + cached per-block state.
+        mseg::Player msegPlayers[mseg::maxMsegs];
+        double msegInc[mseg::maxMsegs]    {};
+        bool   msegLoopOn[mseg::maxMsegs] {};
+        bool   msegActive[mseg::maxMsegs] {};
 
         // Cached per-block MIDI/matrix state.
         float modWheelVal = 0.0f, aftertouchVal = 0.0f, keyTrackSource = 0.0f;
