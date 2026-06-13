@@ -154,6 +154,12 @@ namespace pike
         int  getCurrentNote() const noexcept { return currentNote; }
         bool isSounding()     const noexcept { return ampEnvelope.isActive(); }
 
+        // For the editor's MSEG playhead: how recent this note is (smaller =
+        // newer) and each MSEG's current phase / activity.
+        int   samplesSinceNoteOnCount() const noexcept { return samplesSinceNoteOn; }
+        float msegPosition (int m) const noexcept { return (float) msegPlayers[m].position(); }
+        bool  msegIsActive (int m) const noexcept { return msegActive[m]; }
+
         /** Legato pitch change: glide to the new note without retriggering. */
         void retune (int midiNoteNumber) noexcept
         {

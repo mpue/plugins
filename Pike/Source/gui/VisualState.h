@@ -14,6 +14,7 @@
 #pragma once
 
 #include <atomic>
+#include "../dsp/Mseg.h"
 
 namespace pike
 {
@@ -21,11 +22,21 @@ namespace pike
     {
         static constexpr int scopeSize = 1024;          // power of two
 
+        VisualState()
+        {
+            for (auto& p : msegPhase)
+                p.store (-1.0f, std::memory_order_relaxed);
+        }
+
         std::atomic<float> meterL { 0.0f };             // block peak, 0..1
         std::atomic<float> meterR { 0.0f };
 
         std::atomic<int>   triggerId { 0 };             // bumps on each note-on
         std::atomic<bool>  gate { false };              // true while a note is held
+
+        // MSEG playheads: 0..1 phase of the most recently triggered sounding
+        // voice per MSEG, or < 0 when that MSEG has no active playhead.
+        std::atomic<float> msegPhase[mseg::maxMsegs];
 
         float              scope[scopeSize] = {};       // mono output ring
         std::atomic<int>   scopeWrite { 0 };

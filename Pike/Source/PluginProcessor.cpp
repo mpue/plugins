@@ -380,6 +380,27 @@ void PikeAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     if (L != nullptr)
         for (int i = 0; i < numSamples; ++i)
             visualState.pushScope (0.5f * (L[i] + R[i]));
+
+    publishMsegPhases();
+}
+
+void PikeAudioProcessor::publishMsegPhases()
+{
+    // Representative voice: the most recently triggered one still sounding.
+    const pike::PikeVoice* best = nullptr;
+    int bestAge = 0;
+    for (int i = 0; i < synth.getNumVoices(); ++i)
+        if (auto* v = dynamic_cast<pike::PikeVoice*> (synth.getVoice (i)))
+            if (v->isSounding())
+            {
+                const int age = v->samplesSinceNoteOnCount();
+                if (best == nullptr || age < bestAge) { bestAge = age; best = v; }
+            }
+
+    for (int m = 0; m < pike::mseg::maxMsegs; ++m)
+        visualState.msegPhase[m].store (
+            best != nullptr && best->msegIsActive (m) ? best->msegPosition (m) : -1.0f,
+            std::memory_order_relaxed);
 }
 
 void PikeAudioProcessor::updateEqFromParams()

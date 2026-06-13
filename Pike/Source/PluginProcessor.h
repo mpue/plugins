@@ -131,6 +131,10 @@ private:
     /** Updates LFO rates/phases and captures MIDI mod sources for this block. */
     void updateModulationRuntime (const juce::MidiBuffer& midi, int numSamples);
 
+    /** Publishes the most recently triggered sounding voice's MSEG phases to
+        the VisualState so the editor can draw playheads. */
+    void publishMsegPhases();
+
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PikeAudioProcessor)
 };

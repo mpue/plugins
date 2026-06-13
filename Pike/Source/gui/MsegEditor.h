@@ -23,13 +23,15 @@
 
 #include <JuceHeader.h>
 #include "GlassStyle.h"
+#include "VisualState.h"
 #include "../dsp/Mseg.h"
 #include "../params/MsegStore.h"
 
 namespace pike::gui
 {
     class MsegEditor : public juce::Component,
-                       private juce::ValueTree::Listener
+                       private juce::ValueTree::Listener,
+                       private juce::Timer
     {
     public:
         MsegEditor() = default;
@@ -47,6 +49,17 @@ namespace pike::gui
             tree = std::move (newTree);
             if (tree.isValid())
                 tree.addListener (this);
+            repaint();
+        }
+
+        /** Binds the live playhead to the given VisualState / MSEG index. */
+        void setPlayheadSource (VisualState* vs, int index)
+        {
+            visualState = vs;
+            playheadIndex = index;
+            shownPhase = -1.0f;
+            if (vs != nullptr && ! isTimerRunning())
+                startTimerHz (30);
             repaint();
         }
 
@@ -164,6 +177,17 @@ namespace pike::gui
                 g.fillEllipse (x - r, y - r, 2.0f * r, 2.0f * r);
                 g.setColour (hot ? juce::Colours::white : theme::bgDeep);
                 g.drawEllipse (x - r, y - r, 2.0f * r, 2.0f * r, 1.5f);
+            }
+
+            // Live playhead (driven by the most recent sounding voice).
+            if (shownPhase >= 0.0f && shownPhase <= 1.0f)
+            {
+                const float px = xForT (shownPhase);
+                const float py = yForV (valueAtT (shownPhase));
+                g.setColour (juce::Colours::white.withAlpha (0.45f));
+                g.drawVerticalLine ((int) px, plot.getY(), plot.getBottom());
+                g.setColour (juce::Colours::white);
+                g.fillEllipse (px - 3.0f, py - 3.0f, 6.0f, 6.0f);
             }
         }
 
@@ -349,6 +373,25 @@ namespace pike::gui
         float pointV (int i) const { return (float) tree.getChild (i).getProperty (MsegStore::propV, 0.0); }
         float pointC (int i) const { return (float) tree.getChild (i).getProperty (MsegStore::propC, 0.0); }
 
+        /** Envelope value at normalized time t (mirrors the DSP's shaping). */
+        float valueAtT (float t) const
+        {
+            const int n = numPoints();
+            if (n < 2)        return 0.0f;
+            if (t <= 0.0f)    return pointV (0);
+            if (t >= 1.0f)    return pointV (n - 1);
+
+            int s = 0;
+            while (s + 1 < n && t >= pointT (s + 1))
+                ++s;
+            if (s >= n - 1)
+                return pointV (n - 1);
+
+            const float t0 = pointT (s), t1 = pointT (s + 1);
+            const float u  = t1 > t0 ? (t - t0) / (t1 - t0) : 0.0f;
+            return pointV (s) + (pointV (s + 1) - pointV (s)) * mseg::shapeU (u, pointC (s));
+        }
+
         void setPointProperty (int i, const juce::Identifier& prop, float value)
         {
             auto pt = tree.getChild (i);
@@ -523,7 +566,28 @@ namespace pike::gui
         void valueTreeChildRemoved (juce::ValueTree&, juce::ValueTree&, int) override      { repaint(); }
         void valueTreeChildOrderChanged (juce::ValueTree&, int, int) override              { repaint(); }
 
+        //======================================================================
+        // Timer — poll the live playhead and repaint only on a real change.
+        void timerCallback() override
+        {
+            if (visualState == nullptr)
+                return;
+
+            const float p = visualState->msegPhase[playheadIndex].load (std::memory_order_relaxed);
+            const bool wasActive = shownPhase >= 0.0f;
+            const bool isActive  = p >= 0.0f;
+            if (isActive != wasActive || (isActive && std::abs (p - shownPhase) > 0.002f))
+            {
+                shownPhase = p;
+                repaint();
+            }
+        }
+
         juce::ValueTree tree;
+
+        VisualState* visualState = nullptr;
+        int   playheadIndex = 0;
+        float shownPhase = -1.0f;
 
         Hover hover = Hover::none;
         int   hoverIndex = -1;

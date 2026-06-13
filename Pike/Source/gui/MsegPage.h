@@ -18,6 +18,7 @@
 #include <JuceHeader.h>
 #include "PikeUI.h"
 #include "MsegEditor.h"
+#include "VisualState.h"
 #include "../params/MsegStore.h"
 #include "../params/ParameterIDs.h"
 
@@ -27,8 +28,8 @@ namespace pike::gui
                      private juce::ValueTree::Listener
     {
     public:
-        MsegPage (juce::AudioProcessorValueTreeState& state, MsegStore& msegStore)
-            : apvts (state), store (msegStore)
+        MsegPage (juce::AudioProcessorValueTreeState& state, MsegStore& msegStore, VisualState& vs)
+            : apvts (state), store (msegStore), visualState (vs)
         {
             for (int n = 0; n < mseg::maxMsegs; ++n)
             {
@@ -123,6 +124,7 @@ namespace pike::gui
                 paramGroups[n]->setVisible (n == selected);
 
             editor.setTree (store.getMsegTree (selected));
+            editor.setPlayheadSource (&visualState, selected);
             repaint();
         }
 
@@ -168,6 +170,7 @@ namespace pike::gui
 
         juce::AudioProcessorValueTreeState& apvts;
         MsegStore& store;
+        VisualState& visualState;
 
         juce::OwnedArray<juce::TextButton> selectButtons;
         juce::TextButton addButton { "+" };
