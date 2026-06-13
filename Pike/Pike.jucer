@@ -49,6 +49,7 @@
           <FILE id="pkDly01" name="Delay.h" compile="0" resource="0" file="Source/dsp/fx/Delay.h" />
           <FILE id="pkFxc01" name="FxChain.h" compile="0" resource="0" file="Source/dsp/fx/FxChain.h" />
           <FILE id="pkPeqFx" name="ParametricEQ.h" compile="0" resource="0" file="Source/dsp/fx/ParametricEQ.h" />
+        <FILE id="pkEqAu1" name="EQAutomationTrack.h" compile="0" resource="0" file="Source/dsp/fx/EQAutomationTrack.h" />
         </GROUP>
       </GROUP>
       <GROUP id="pkSynth1" name="synth">

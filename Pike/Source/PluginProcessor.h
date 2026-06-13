@@ -14,6 +14,7 @@
 #include "synth/VoiceManager.h"
 #include "dsp/fx/FxChain.h"
 #include "dsp/fx/ParametricEQ.h"
+#include "dsp/fx/EQAutomationTrack.h"
 #include "params/MsegStore.h"
 #include "presets/PresetManager.h"
 #include "midi/MidiLearnManager.h"
@@ -78,6 +79,12 @@ public:
     /** MSEG point data (message-side model, publishes audio snapshots). */
     pike::MsegStore& getMsegStore() noexcept { return msegStore; }
 
+    /** The 8-band EQ (editor reads live band values for the animated display). */
+    pike::ParametricEQ& getEq() noexcept { return eq; }
+
+    /** Record/playback of EQ-handle automation (the "animated equalizer"). */
+    pike::EQAutomationTrack& getEqAutomation() noexcept { return eqAuto; }
+
     static constexpr int numVoices = 24;
 
 private:
@@ -113,6 +120,26 @@ private:
     // Mix / EQ.
     pike::ParametricEQ eq;
     void updateEqFromParams();
+
+    // Animated EQ: records/plays EQ-handle motion. The serialized track lives in
+    // apvts.state under this property, so it rides along with sessions/presets.
+    pike::EQAutomationTrack eqAuto;
+    bool eqAutoNotesWereActive = false;
+    static inline const juce::Identifier eqAutoProp { "eqAuto" };
+
+    // Reloads eqAuto from apvts.state whenever the state is replaced (preset or
+    // session load); writes are made by the editor, so we don't reload on those.
+    struct EqAutoStateSync : juce::ValueTree::Listener
+    {
+        EqAutoStateSync (pike::EQAutomationTrack& a, const juce::Identifier& p) : track (a), prop (p) {}
+        void valueTreeRedirected (juce::ValueTree& t) override
+        {
+            track.loadStateFromString (t.getProperty (prop, juce::String()).toString());
+        }
+        pike::EQAutomationTrack& track;
+        juce::Identifier prop;
+    };
+    EqAutoStateSync eqAutoSync { eqAuto, eqAutoProp };
 
     // Arpeggiator + voice-mode dispatch.
     pike::Arpeggiator arpeggiator;

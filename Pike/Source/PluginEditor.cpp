@@ -70,7 +70,7 @@ PikeContent::PikeContent (PikeAudioProcessor& p) : audioProcessor (p)
     tabs.addTab ("Mod",          tabColour, new ModPage (apvts),                                               true);
     tabs.addTab ("MSEG",         tabColour, new MsegPage (apvts, audioProcessor.getMsegStore(), audioProcessor.getVisualState()), true);
     tabs.addTab ("FX",           tabColour, new Page (apvts, fxPage()),                                        true);
-    tabs.addTab ("Mix / EQ",     tabColour, new MixEqPage (apvts),                                             true);
+    tabs.addTab ("Mix / EQ",     tabColour, new MixEqPage (apvts, audioProcessor.getEq(), audioProcessor.getEqAutomation()), true);
     tabs.addTab ("Arp / Voice",  tabColour, new Page (apvts, arpVoicePage()),                                  true);
 
     // Preset bar.

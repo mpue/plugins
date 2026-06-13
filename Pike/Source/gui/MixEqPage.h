@@ -16,16 +16,21 @@
 #include "Visualisers.h"
 #include "../params/ParameterIDs.h"
 #include "../dsp/fx/ParametricEQ.h"
+#include "../dsp/fx/EQAutomationTrack.h"
 
 namespace pike::gui
 {
     //==============================================================================
-    /** Frequency response of the 8-band EQ, computed from the parameters, with
-        draggable band nodes (horizontal = freq, vertical = gain). */
+    /** Frequency response of the 8-band EQ, with draggable band nodes
+        (horizontal = freq, vertical = gain). Reads from the parameters normally,
+        but from the live EQ object while automation plays (so the curve animates),
+        and records handle drags into the automation track while armed. */
     class EqDisplay : public juce::Component, private juce::Timer
     {
     public:
-        explicit EqDisplay (juce::AudioProcessorValueTreeState& s) : state (s)
+        EqDisplay (juce::AudioProcessorValueTreeState& s, pike::ParametricEQ& eqRef,
+                   pike::EQAutomationTrack& autoRef)
+            : state (s), eq (eqRef), eqAuto (autoRef)
         {
             for (int b = 0; b < numBands; ++b)
             {
@@ -97,8 +102,12 @@ namespace pike::gui
         void mouseDrag (const juce::MouseEvent& e) override
         {
             if (dragBand < 0) return;
-            setF (dragBand, xToFreqNorm (juce::jlimit (0.0f, 1.0f, (e.position.x - plot.getX()) / plot.getWidth())));
-            setG (dragBand, yToDb (e.position.y));
+            const float hz = (float) xToFreqNorm (juce::jlimit (0.0f, 1.0f, (e.position.x - plot.getX()) / plot.getWidth()));
+            const float db = juce::jlimit (dbMin, dbMax, yToDb (e.position.y));
+            setF (dragBand, hz);
+            setG (dragBand, db);
+            if (eqAuto.isRecording())
+                eqAuto.recordEvent (dragBand, hz, db);
             repaint();
         }
 
@@ -123,8 +132,10 @@ namespace pike::gui
         static constexpr double fMin = 20.0, fMax = 20000.0;
         static constexpr float  dbMax = 24.0f, dbMin = -24.0f;
 
-        float getF (int b) const { auto* p = state.getRawParameterValue (pid::eqFreq[b]); return p ? p->load() : 1000.0f; }
-        float getG (int b) const { auto* p = state.getRawParameterValue (pid::eqGain[b]); return p ? p->load() : 0.0f; }
+        // While automation plays, the live EQ object holds the moving values;
+        // otherwise the parameters are the source of truth.
+        float getF (int b) const { if (eqAuto.isPlaying()) return eq.getBand (b).frequency; auto* p = state.getRawParameterValue (pid::eqFreq[b]); return p ? p->load() : 1000.0f; }
+        float getG (int b) const { if (eqAuto.isPlaying()) return eq.getBand (b).gainDb;    auto* p = state.getRawParameterValue (pid::eqGain[b]); return p ? p->load() : 0.0f; }
         float getQ (int b) const { auto* p = state.getRawParameterValue (pid::eqQ[b]);    return p ? p->load() : 1.0f; }
 
         void setF (int b, float hz) { if (freqParam[b]) freqParam[b]->setValueNotifyingHost (freqParam[b]->convertTo0to1 (hz)); }
@@ -164,12 +175,15 @@ namespace pike::gui
 
         void timerCallback() override
         {
+            if (eqAuto.isPlaying()) { repaint(); return; }   // animated curve
             float s = 0.0f;
             for (int b = 0; b < numBands; ++b) s += getF (b) * 0.001f + getG (b) + getQ (b);
             if (std::abs (s - lastSum) > 1.0e-5f) { lastSum = s; repaint(); }
         }
 
         juce::AudioProcessorValueTreeState& state;
+        pike::ParametricEQ&      eq;
+        pike::EQAutomationTrack& eqAuto;
         juce::RangedAudioParameter* freqParam[numBands] {};
         juce::RangedAudioParameter* gainParam[numBands] {};
         juce::Rectangle<float> plot;
@@ -228,22 +242,57 @@ namespace pike::gui
     };
 
     //==============================================================================
-    class MixEqPage : public juce::Component
+    class MixEqPage : public juce::Component, private juce::Timer
     {
     public:
-        explicit MixEqPage (juce::AudioProcessorValueTreeState& state)
+        MixEqPage (juce::AudioProcessorValueTreeState& s, pike::ParametricEQ& eq,
+                   pike::EQAutomationTrack& autoRef)
+            : state (s), eqAuto (autoRef)
         {
             master = std::make_unique<Group> (state, GroupSpec { "Master", {
                 { CtrlType::Knob,   pid::masterGain, "Gain" },
                 { CtrlType::Toggle, pid::eqOn,       "EQ On" } } });
             addAndMakeVisible (*master);
 
-            display = std::make_unique<EqDisplay> (state);
+            display = std::make_unique<EqDisplay> (state, eq, eqAuto);
             addAndMakeVisible (*display);
 
             for (int b = 0; b < 8; ++b)
                 addAndMakeVisible (bands.add (new EqBandPanel (state, b)));
+
+            // Animated-EQ transport: record / loop-play / clear handle motion.
+            auto setupButton = [this] (std::unique_ptr<juce::TextButton>& btn, const juce::String& text,
+                                       bool toggles, juce::Colour onCol, juce::Colour offText)
+            {
+                btn = std::make_unique<juce::TextButton> (text);
+                btn->setClickingTogglesState (toggles);
+                btn->setColour (juce::TextButton::buttonColourId,   juce::Colour (0xff141a22));
+                btn->setColour (juce::TextButton::buttonOnColourId, onCol);
+                btn->setColour (juce::TextButton::textColourOffId,  offText);
+                btn->setColour (juce::TextButton::textColourOnId,   juce::Colours::white);
+                addAndMakeVisible (*btn);
+            };
+            setupButton (recButton,   "REC",   true,  juce::Colour (0xffdd2222), juce::Colour (0xffdd6666));
+            setupButton (playButton,  "PLAY",  true,  theme::accent,             theme::accent);
+            setupButton (clearButton, "CLEAR", false, juce::Colour (0xff3a4250), theme::textDim);
+
+            recButton->onClick = [this]
+            {
+                if (recButton->getToggleState()) eqAuto.startRecording();
+                else                           { eqAuto.stopRecording(); persist(); }
+            };
+            playButton->onClick = [this] { eqAuto.setPlaying (playButton->getToggleState()); persist(); };
+            clearButton->onClick = [this]
+            {
+                eqAuto.clearAll();
+                playButton->setToggleState (false, juce::dontSendNotification);
+                persist();
+            };
+
+            startTimerHz (10);   // keep the toggle states in sync after preset loads
         }
+
+        ~MixEqPage() override { stopTimer(); }
 
         void paint (juce::Graphics& g) override
         {
@@ -265,9 +314,16 @@ namespace pike::gui
             const int pad = 8;
             auto area = getLocalBounds().reduced (pad);
 
-            // Top row: Master group (left) + response display (rest).
-            auto top = area.removeFromTop (juce::jmax (150, master->preferredHeight()));
-            master->setBounds (top.removeFromLeft (master->preferredWidth()));
+            // Top row: Master group + transport buttons (left), response display (rest).
+            auto top = area.removeFromTop (juce::jmax (150, master->preferredHeight() + 34));
+            auto leftCol = top.removeFromLeft (master->preferredWidth());
+            master->setBounds (leftCol.removeFromTop (master->preferredHeight()));
+            leftCol.removeFromTop (6);
+            auto btnRow = leftCol.removeFromTop (24);
+            const int bw = (btnRow.getWidth() - 8) / 3;
+            recButton->setBounds   (btnRow.removeFromLeft (bw)); btnRow.removeFromLeft (4);
+            playButton->setBounds  (btnRow.removeFromLeft (bw)); btnRow.removeFromLeft (4);
+            clearButton->setBounds (btnRow);
             top.removeFromLeft (pad);
             display->setBounds (top);
 
@@ -283,10 +339,26 @@ namespace pike::gui
         }
 
     private:
+        void persist()
+        {
+            state.state.setProperty (juce::Identifier ("eqAuto"), eqAuto.getStateAsString(), nullptr);
+        }
+
+        void timerCallback() override
+        {
+            // Reflect automation state in the toggles (e.g. after a preset load).
+            playButton->setToggleState (eqAuto.isPlaying(),   juce::dontSendNotification);
+            recButton->setToggleState  (eqAuto.isRecording(), juce::dontSendNotification);
+        }
+
+        juce::AudioProcessorValueTreeState& state;
+        pike::EQAutomationTrack&            eqAuto;
+
         std::unique_ptr<Group>       master;
         std::unique_ptr<EqDisplay>   display;
         juce::OwnedArray<EqBandPanel> bands;
         juce::Rectangle<int>         bandTop;
+        std::unique_ptr<juce::TextButton> recButton, playButton, clearButton;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MixEqPage)
     };

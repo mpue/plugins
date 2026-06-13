@@ -30,7 +30,15 @@ PikeAudioProcessor::PikeAudioProcessor()
 {
     cacheParameterPointers();
 
-    presetManager.onResetNonParamState = [this] { msegStore.resetAll(); };
+    presetManager.onResetNonParamState = [this]
+    {
+        msegStore.resetAll();
+        eqAuto.clearAll();
+        apvts.state.setProperty (eqAutoProp, eqAuto.getStateAsString(), nullptr);
+    };
+
+    // Restore the animated-EQ track whenever the state tree is replaced.
+    apvts.state.addListener (&eqAutoSync);
 
     synth.addSound (new pike::PikeSound());
     for (int i = 0; i < numVoices; ++i)
@@ -192,6 +200,7 @@ void PikeAudioProcessor::updateModulationRuntime (const juce::MidiBuffer& midi, 
 
 PikeAudioProcessor::~PikeAudioProcessor()
 {
+    apvts.state.removeListener (&eqAutoSync);
 }
 
 //==============================================================================
@@ -267,6 +276,7 @@ void PikeAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
     fxChain.prepare (sampleRate, samplesPerBlock, getTotalNumOutputChannels());
     eq.prepare (sampleRate, samplesPerBlock);
+    eqAuto.prepareToPlay (sampleRate);
 
     synth.setCurrentPlaybackSampleRate (sampleRate);
 
@@ -339,8 +349,31 @@ void PikeAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     // Global FX chain (Distortion -> Chorus -> Delay -> Reverb).
     fxChain.process (buffer, readFxParams(), currentBpm);
 
-    // Mix / EQ (8-band parametric).
+    // Mix / EQ (8-band parametric). Base values come from the parameters; the
+    // animated-EQ track then overrides recorded bands (must run AFTER the params).
     updateEqFromParams();
+    {
+        bool notesActive = false;
+        for (int i = 0; i < synth.getNumVoices() && ! notesActive; ++i)
+            if (auto* v = dynamic_cast<pike::PikeVoice*> (synth.getVoice (i)))
+                notesActive = v->isSounding();
+
+        if (eqAuto.isPlaying() && eqAuto.getLoopDurationSec() > 0.0f)
+        {
+            // Note-triggered: restart on the first note, run only while sounding.
+            if (notesActive && ! eqAutoNotesWereActive)
+                eqAuto.resetPlaybackPosition();
+            if (notesActive)
+                eqAuto.advance (numSamples, &eq);
+        }
+        else
+        {
+            // Play off / no data: keep advancing so the recording clock runs.
+            eqAuto.advance (numSamples, &eq);
+        }
+        eqAutoNotesWereActive = notesActive;
+    }
+
     if (eq.isEnabled() && buffer.getNumChannels() >= 1)
     {
         auto* L = buffer.getWritePointer (0);
