@@ -22,6 +22,7 @@
 #include "gui/MsegPage.h"
 #include "gui/MixEqPage.h"
 #include "gui/MidiLearnOverlay.h"
+#include "Licensing/ActivationOverlay.h"
 
 //==============================================================================
 /** All UI laid out at a fixed design size; the editor scales this component. */
@@ -36,7 +37,12 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
+    /** Invoked after the license state changes from here (e.g. a deactivation),
+        so the editor can re-show the activation overlay and re-mute audio. */
+    void setLicenseChangedCallback (std::function<void()> cb) { onLicenseChanged = std::move (cb); }
+
 private:
+    void showLicenseMenu();
     void refreshPresets();
     void loadPresetAtComboId (int comboId);
     void stepPreset (int direction);
@@ -64,6 +70,8 @@ private:
 
     juce::ComboBox   presetBox;
     juce::TextButton prevButton { "<" }, nextButton { ">" }, saveButton { "Save" };
+    juce::TextButton licenseButton { "License" };
+    std::function<void()> onLicenseChanged;
     struct PresetItem { bool factory; juce::String name; };
     std::vector<PresetItem> presetItems;
     std::unique_ptr<juce::AlertWindow> saveDialog;
@@ -85,9 +93,14 @@ public:
     void resized() override;
 
 private:
+    /** Shows the modal-style activation overlay over the whole editor and wires
+        up the success callback (hide overlay + refresh the processor's gate). */
+    void showLicenseOverlay (bool reactivation);
+
     PikeAudioProcessor& audioProcessor;
     ElegantDarkLookAndFeel lookAndFeel;
     PikeContent content;
+    std::unique_ptr<pike::gui::ActivationOverlay> licenseOverlay;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PikeAudioProcessorEditor)
 };

@@ -85,6 +85,9 @@ PikeContent::PikeContent (PikeAudioProcessor& p) : audioProcessor (p)
     saveButton.onClick = [this] { showSaveDialog(); };
     refreshPresets();
 
+    addAndMakeVisible (licenseButton);
+    licenseButton.onClick = [this] { showLicenseMenu(); };
+
     // Header eyecatchers.
     scope = std::make_unique<Oscilloscope> (audioProcessor.getVisualState());
     meter = std::make_unique<LevelMeter>   (audioProcessor.getVisualState());
@@ -160,6 +163,72 @@ void PikeContent::showMidiLearnMenu (const juce::String& paramId)
         if      (r == 1) ml.arm (idx);
         else if (r == 2) ml.clearMapping (idx);
         else if (r == 3) ml.cancel();
+    });
+}
+
+//==============================================================================
+void PikeContent::showLicenseMenu()
+{
+    auto* lm = LicenseManager::getInstance();
+    const bool activated = (lm->verifyLocal() == ActivationState::Activated);
+
+    juce::String header;
+    if (activated)
+        header = "License: activated";
+    else if (lm->isTrialActive())
+        header = "Demo: " + juce::String (lm->trialDaysRemaining()) + " days left";
+    else
+        header = "License: not activated";
+
+    juce::PopupMenu m;
+    m.addSectionHeader (header);
+    m.addItem (1, "License server...");
+    m.addItem (2, "Deactivate this device", activated);
+
+    m.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (licenseButton),
+        [this] (int r)
+    {
+        if (r == 1)
+        {
+            // Server-Override aendern (analog zum Overlay-Button).
+            auto* w = new juce::AlertWindow (
+                "License Server",
+                "Base URL of the license server (without the trailing /activate). "
+                "Leave empty to use the built-in default.",
+                juce::AlertWindow::NoIcon);
+            w->setLookAndFeel (&getLookAndFeel());
+            w->addTextEditor ("url", LicenseManager::getServerUrlOverride(), "URL:");
+            w->addButton ("OK", 1, juce::KeyPress (juce::KeyPress::returnKey));
+            w->addButton ("Cancel", 0, juce::KeyPress (juce::KeyPress::escapeKey));
+            w->enterModalState (true,
+                juce::ModalCallbackFunction::create ([w] (int res)
+                {
+                    if (res == 1)
+                        LicenseManager::setServerUrlOverride (w->getTextEditorContents ("url"));
+                }), true);
+        }
+        else if (r == 2)
+        {
+            // Seat serverseitig freigeben (kurzer, synchroner Netzwerk-Call —
+            // wie in Synthlab) und danach das Gate wieder schliessen.
+            const bool ok = LicenseManager::getInstance()->deactivate();
+            if (ok)
+            {
+                if (onLicenseChanged)
+                    onLicenseChanged();
+                juce::AlertWindow::showMessageBoxAsync (
+                    juce::AlertWindow::InfoIcon, "Deactivate License",
+                    "This device has been deactivated. Pike must be activated again to "
+                    "produce sound.");
+            }
+            else
+            {
+                juce::AlertWindow::showMessageBoxAsync (
+                    juce::AlertWindow::WarningIcon, "Deactivate License",
+                    "Deactivation failed (could not reach the license server?). "
+                    "Please try again.");
+            }
+        }
     });
 }
 
@@ -309,6 +378,8 @@ void PikeContent::resized()
     if (scope != nullptr) scope->setBounds (header);
 
     auto bar = area.removeFromTop (kPresetHeight).reduced (8, 4);
+    licenseButton.setBounds (bar.removeFromRight (74));
+    bar.removeFromRight (6);
     saveButton.setBounds (bar.removeFromRight (70));
     bar.removeFromRight (6);
     nextButton.setBounds (bar.removeFromRight (32));
@@ -336,6 +407,46 @@ PikeAudioProcessorEditor::PikeAudioProcessorEditor (PikeAudioProcessor& p)
                      PikeContent::designW * 2, PikeContent::designH * 2);
 
     setSize (1000, 655);
+
+    // Deactivation from within the running editor re-shows the activation gate.
+    content.setLicenseChangedCallback ([this]
+    {
+        audioProcessor.refreshLicenseState();
+        showLicenseOverlay (false);
+    });
+
+    // License gate: if not locally activated, cover the editor with the overlay.
+    LicenseManager::initCrypto();
+    const ActivationState state = LicenseManager::getInstance()->verifyLocal();
+    if (state != ActivationState::Activated)
+        showLicenseOverlay (state == ActivationState::MachineMismatch);
+}
+
+void PikeAudioProcessorEditor::showLicenseOverlay (bool reactivation)
+{
+    // While the 30-day demo runs, the overlay offers a "Continue in demo" button;
+    // once it expires the button is gone and the gate is hard again.
+    auto* lm = LicenseManager::getInstance();
+    const int trialDaysLeft = lm->isTrialActive() ? lm->trialDaysRemaining() : 0;
+
+    licenseOverlay = std::make_unique<pike::gui::ActivationOverlay> (
+        reactivation,
+        trialDaysLeft,
+        [this]
+        {
+            // Activation succeeded: lift the gate and let audio through again.
+            audioProcessor.refreshLicenseState();
+            licenseOverlay.reset();
+        },
+        [this]
+        {
+            // User keeps using the demo: just hide the overlay. Audio already
+            // passes because the processor's demo gate is open.
+            licenseOverlay.reset();
+        });
+
+    addAndMakeVisible (*licenseOverlay);
+    licenseOverlay->setBounds (getLocalBounds());
 }
 
 PikeAudioProcessorEditor::~PikeAudioProcessorEditor()
@@ -360,4 +471,7 @@ void PikeAudioProcessorEditor::resized()
     const float sh = PikeContent::designH * s;
     content.setTransform (juce::AffineTransform::scale (s)
                               .translated ((r.getWidth() - sw) * 0.5f, (r.getHeight() - sh) * 0.5f));
+
+    if (licenseOverlay != nullptr)
+        licenseOverlay->setBounds (getLocalBounds());
 }

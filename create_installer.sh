@@ -1,16 +1,24 @@
 #!/usr/bin/env bash
-# Builds a macOS .pkg installer that bundles every plugin in this repo as a
-# component package. The resulting installer presents a customisable choice
-# tree: top-level groups by format (AU / VST3), with one toggle per plugin
-# inside each group. The user can therefore pick:
-#   • which formats to install (top-level)
-#   • which individual plugins to install (per format)
+# Builds macOS .pkg installers for the plugins in this repo.
+#
+# Default: ONE suite installer bundling every selected plugin as a component
+# package with a customisable choice tree: top-level groups by format
+# (AU / VST3), one toggle per plugin inside each group.
+#
+# Individual plugins:
+#   • --plugins with a SINGLE plugin produces an installer named after that
+#     plugin (e.g. Pike-1.0.0.pkg) instead of the suite installer
+#   • --each produces one standalone installer per selected plugin
 #
 # Usage:
-#   ./create_installer.sh                             # version 1.0.0
-#   ./create_installer.sh 2.1.0                       # explicit version
-#   ./create_installer.sh 2.1.0 --plugins AF-1,Lupo   # subset only
-#   ./create_installer.sh 2.1.0 --formats VST3        # AU or VST3 only
+#   ./create_installer.sh                              # suite, version 1.0.0
+#   ./create_installer.sh 2.1.0                        # explicit version
+#   ./create_installer.sh 2.1.0 --plugins AF-1,Lupo    # suite with subset
+#   ./create_installer.sh 2.1.0 --plugins Pike         # single-plugin installer
+#   ./create_installer.sh 2.1.0 --each                 # one installer per plugin
+#   ./create_installer.sh 2.1.0 --plugins AF-1,Lupo --each
+#   ./create_installer.sh 2.1.0 --formats VST3         # AU or VST3 only
+#   ./create_installer.sh 2.1.0 --name MyBundle        # override name/title
 #
 # Requires the plugins to have been built into
 #   <plugin>/Builds/MacOSX/build/Release/<plugin>.{component,vst3}
@@ -28,6 +36,8 @@ ALL_FORMATS=(AU VST3)
 VERSION="1.0.0"
 PLUGINS=()
 FORMATS=()
+NAME=""
+EACH=0
 
 # First positional arg (if it doesn't start with --) is the version.
 if [[ $# -gt 0 && "$1" != --* ]]; then
@@ -38,7 +48,9 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --plugins)  IFS=',' read -r -a PLUGINS <<< "$2"; shift 2 ;;
         --formats)  IFS=',' read -r -a FORMATS <<< "$2"; shift 2 ;;
-        -h|--help)  sed -n '2,18p' "$0"; exit 0 ;;
+        --name)     NAME="$2"; shift 2 ;;
+        --each)     EACH=1; shift ;;
+        -h|--help)  sed -n '2,26p' "$0"; exit 0 ;;
         *) echo "Unknown argument: $1" >&2; exit 2 ;;
     esac
 done
@@ -46,15 +58,18 @@ done
 [[ ${#PLUGINS[@]} -eq 0 ]] && PLUGINS=("${ALL_PLUGINS[@]}")
 [[ ${#FORMATS[@]} -eq 0 ]] && FORMATS=("${ALL_FORMATS[@]}")
 
+if (( EACH )) && [[ -n "$NAME" ]]; then
+    echo "ERROR: --name cannot be combined with --each (each installer is named after its plugin)." >&2
+    exit 2
+fi
+
 INSTALLER_DIR="$SCRIPT_DIR/Installer"
 STAGING_DIR="$INSTALLER_DIR/staging"
 PKG_DIR="$INSTALLER_DIR/packages"
-RESOURCES_DIR="$INSTALLER_DIR/resources"
 OUTPUT_DIR="$INSTALLER_DIR/output"
-DIST_XML="$INSTALLER_DIR/distribution.xml"
 
-INSTALLER_NAME="Pueski-Plugins"
-TOP_TITLE="Pueski Plugin Suite"
+SUITE_NAME="Pueski-Plugins"
+SUITE_TITLE="Pueski Plugin Suite"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 plugin_manufacturer() {
@@ -126,42 +141,63 @@ fi
 
 # ── Reset staging ────────────────────────────────────────────────────────────
 rm -rf "$STAGING_DIR" "$PKG_DIR"
-mkdir -p "$STAGING_DIR" "$PKG_DIR" "$OUTPUT_DIR" "$RESOURCES_DIR"
+mkdir -p "$STAGING_DIR" "$PKG_DIR" "$OUTPUT_DIR"
 
-# ── Build one component .pkg per (plugin, format) ────────────────────────────
-declare -a PKG_REFS=()              # all <pkg-ref> identifiers
-declare -a CHOICE_LINES_AU=()       # outline children for AU group
-declare -a CHOICE_LINES_VST3=()     # outline children for VST3 group
-declare -a CHOICE_BLOCKS=()         # individual <choice> blocks
-declare -a PKG_REF_BLOCKS=()        # <pkg-ref ...>file.pkg</pkg-ref> blocks
+# ── Component .pkg per (plugin, format) — shared across installers ───────────
+build_component_pkg() {
+    local plugin="$1" format="$2"
+    local art bid sub stage_root
+    local pkg_filename="${plugin}-${format}.pkg"
 
-for plugin in "${PLUGINS[@]}"; do
-    for format in "${FORMATS[@]}"; do
-        art=$(artifact_for "$plugin" "$format")
-        bid=$(bundle_id "$plugin" "$format")
-        sub=$(install_subdir_for "$format")
-        pkg_filename="${plugin}-${format}.pkg"
-        choice_id="${plugin//-/_}_${format}"
+    [[ -f "$PKG_DIR/$pkg_filename" ]] && return 0   # already built this run
 
-        echo "--> Staging $plugin ($format)"
-        stage_root="$STAGING_DIR/$plugin-$format"
-        mkdir -p "$stage_root/$sub"
-        # cp -R copies the bundle as-is, preserving the .component / .vst3 dir.
-        cp -R "$art" "$stage_root/$sub/"
+    art=$(artifact_for "$plugin" "$format")
+    bid=$(bundle_id "$plugin" "$format")
+    sub=$(install_subdir_for "$format")
 
-        pkgbuild \
-            --root         "$stage_root" \
-            --identifier   "$bid" \
-            --version      "$VERSION" \
-            --install-location "/" \
-            "$PKG_DIR/$pkg_filename" >/dev/null
+    echo "--> Staging $plugin ($format)"
+    stage_root="$STAGING_DIR/$plugin-$format"
+    mkdir -p "$stage_root/$sub"
+    # cp -R copies the bundle as-is, preserving the .component / .vst3 dir.
+    cp -R "$art" "$stage_root/$sub/"
 
-        echo "    -> $PKG_DIR/$pkg_filename"
+    pkgbuild \
+        --root         "$stage_root" \
+        --identifier   "$bid" \
+        --version      "$VERSION" \
+        --install-location "/" \
+        "$PKG_DIR/$pkg_filename" >/dev/null
 
-        # Description shown in the installer customise pane.
-        desc="Installs the $plugin $format plugin to /$sub."
+    echo "    -> $PKG_DIR/$pkg_filename"
+}
 
-        CHOICE_BLOCKS+=("$(cat <<XML
+# ── One product installer for a named set of plugins ─────────────────────────
+OUTPUT_PKGS=()
+
+build_installer() {
+    local name="$1" title="$2"; shift 2
+    local plugins=("$@")
+
+    local dist_xml="$STAGING_DIR/distribution-$name.xml"
+    local res_dir="$STAGING_DIR/resources-$name"
+    mkdir -p "$res_dir"
+
+    local CHOICE_LINES_AU=() CHOICE_LINES_VST3=() CHOICE_BLOCKS=() PKG_REF_BLOCKS=()
+    local plugin format art bid sub pkg_filename choice_id desc
+
+    for plugin in "${plugins[@]}"; do
+        for format in "${FORMATS[@]}"; do
+            build_component_pkg "$plugin" "$format"
+
+            bid=$(bundle_id "$plugin" "$format")
+            sub=$(install_subdir_for "$format")
+            pkg_filename="${plugin}-${format}.pkg"
+            choice_id="${plugin//-/_}_${format}"
+
+            # Description shown in the installer customise pane.
+            desc="Installs the $plugin $format plugin to /$sub."
+
+            CHOICE_BLOCKS+=("$(cat <<XML
     <choice id="$choice_id"
             title="$plugin"
             description="$(xml_escape "$desc")"
@@ -172,28 +208,24 @@ for plugin in "${PLUGINS[@]}"; do
     </choice>
 XML
 )")
+            PKG_REF_BLOCKS+=("    <pkg-ref id=\"$bid\" version=\"$VERSION\" onConclusion=\"none\">$pkg_filename</pkg-ref>")
 
-        PKG_REF_BLOCKS+=("    <pkg-ref id=\"$bid\" version=\"$VERSION\" onConclusion=\"none\">$pkg_filename</pkg-ref>")
-
-        case "$format" in
-            AU)   CHOICE_LINES_AU+=("        <line choice=\"$choice_id\"/>") ;;
-            VST3) CHOICE_LINES_VST3+=("        <line choice=\"$choice_id\"/>") ;;
-        esac
-        PKG_REFS+=("$bid")
+            case "$format" in
+                AU)   CHOICE_LINES_AU+=("        <line choice=\"$choice_id\"/>") ;;
+                VST3) CHOICE_LINES_VST3+=("        <line choice=\"$choice_id\"/>") ;;
+            esac
+        done
     done
-done
 
-# ── Format-group "parent" choices (toggling these toggles every child) ───────
-GROUP_CHOICES=""
-OUTLINE=""
-have_au=0; have_vst3=0
-for f in "${FORMATS[@]}"; do
-    [[ "$f" == "AU" ]]   && have_au=1
-    [[ "$f" == "VST3" ]] && have_vst3=1
-done
+    # ── Format-group "parent" choices (toggling these toggles every child) ───
+    local GROUP_CHOICES="" OUTLINE="" have_au=0 have_vst3=0 f l
+    for f in "${FORMATS[@]}"; do
+        [[ "$f" == "AU" ]]   && have_au=1
+        [[ "$f" == "VST3" ]] && have_vst3=1
+    done
 
-if (( have_au )); then
-    GROUP_CHOICES+=$(cat <<XML
+    if (( have_au )); then
+        GROUP_CHOICES+=$(cat <<XML
 
     <choice id="group_AU"
             title="Audio Unit (AU)"
@@ -203,12 +235,12 @@ if (( have_au )); then
             start_visible="true"/>
 XML
 )
-    OUTLINE+="    <line choice=\"group_AU\">"$'\n'
-    for l in "${CHOICE_LINES_AU[@]}"; do OUTLINE+="$l"$'\n'; done
-    OUTLINE+="    </line>"$'\n'
-fi
-if (( have_vst3 )); then
-    GROUP_CHOICES+=$(cat <<XML
+        OUTLINE+="    <line choice=\"group_AU\">"$'\n'
+        for l in "${CHOICE_LINES_AU[@]}"; do OUTLINE+="$l"$'\n'; done
+        OUTLINE+="    </line>"$'\n'
+    fi
+    if (( have_vst3 )); then
+        GROUP_CHOICES+=$(cat <<XML
 
     <choice id="group_VST3"
             title="VST3"
@@ -218,86 +250,119 @@ if (( have_vst3 )); then
             start_visible="true"/>
 XML
 )
-    OUTLINE+="    <line choice=\"group_VST3\">"$'\n'
-    for l in "${CHOICE_LINES_VST3[@]}"; do OUTLINE+="$l"$'\n'; done
-    OUTLINE+="    </line>"$'\n'
-fi
+        OUTLINE+="    <line choice=\"group_VST3\">"$'\n'
+        for l in "${CHOICE_LINES_VST3[@]}"; do OUTLINE+="$l"$'\n'; done
+        OUTLINE+="    </line>"$'\n'
+    fi
 
-# ── distribution.xml ─────────────────────────────────────────────────────────
-{
-    echo '<?xml version="1.0" encoding="utf-8"?>'
-    echo '<installer-gui-script minSpecVersion="2">'
-    echo "    <title>$TOP_TITLE $VERSION</title>"
-    echo '    <welcome  file="welcome.html"  mime-type="text/html" />'
-    echo '    <license  file="license.html"  mime-type="text/html" />'
-    echo '    <readme   file="readme.html"   mime-type="text/html" />'
-    echo '    <options customize="allow" require-scripts="false" rootVolumeOnly="false"/>'
-    echo '    <choices-outline>'
-    printf '%s' "$OUTLINE"
-    echo '    </choices-outline>'
-    printf '%s\n' "$GROUP_CHOICES"
-    for c in "${CHOICE_BLOCKS[@]}"; do
-        printf '%s\n' "$c"
+    # ── distribution.xml ──────────────────────────────────────────────────────
+    {
+        echo '<?xml version="1.0" encoding="utf-8"?>'
+        echo '<installer-gui-script minSpecVersion="2">'
+        echo "    <title>$(xml_escape "$title") $VERSION</title>"
+        echo '    <welcome  file="welcome.html"  mime-type="text/html" />'
+        echo '    <license  file="license.html"  mime-type="text/html" />'
+        echo '    <readme   file="readme.html"   mime-type="text/html" />'
+        echo '    <options customize="allow" require-scripts="false" rootVolumeOnly="false"/>'
+        echo '    <choices-outline>'
+        printf '%s' "$OUTLINE"
+        echo '    </choices-outline>'
+        printf '%s\n' "$GROUP_CHOICES"
+        local c r
+        for c in "${CHOICE_BLOCKS[@]}"; do
+            printf '%s\n' "$c"
+        done
+        for r in "${PKG_REF_BLOCKS[@]}"; do
+            printf '%s\n' "$r"
+        done
+        echo '</installer-gui-script>'
+    } > "$dist_xml"
+
+    # ── HTML resources (regenerated per installer so the list never goes stale)
+    local YEAR PLUGIN_LIST_HTML="" p
+    YEAR=$(date +%Y)
+    for p in "${plugins[@]}"; do
+        PLUGIN_LIST_HTML+="<li>$p</li>"
     done
-    for r in "${PKG_REF_BLOCKS[@]}"; do
-        printf '%s\n' "$r"
-    done
-    echo '</installer-gui-script>'
-} > "$DIST_XML"
 
-# ── Default HTML resources (don't overwrite if user supplied real ones) ──────
-write_if_missing() {
-    local path="$1" content="$2"
-    [[ -f "$path" ]] && return 0
-    printf '%s' "$content" > "$path"
-}
-
-YEAR=$(date +%Y)
-PLUGIN_LIST_HTML=""
-for p in "${PLUGINS[@]}"; do
-    PLUGIN_LIST_HTML+="<li>$p</li>"
-done
-
-write_if_missing "$RESOURCES_DIR/welcome.html" "<html><body>
-<h2>$TOP_TITLE $VERSION</h2>
+    if [[ ${#plugins[@]} -eq 1 ]]; then
+        cat > "$res_dir/welcome.html" <<HTML
+<html><body>
+<h2>$title $VERSION</h2>
+<p>This installer contains the <b>${plugins[0]}</b> plugin by Matthias Pueski.</p>
+<p>On the next screens you can pick the formats (Audio Unit / VST3) you wish
+to install.</p>
+</body></html>
+HTML
+    else
+        cat > "$res_dir/welcome.html" <<HTML
+<html><body>
+<h2>$title $VERSION</h2>
 <p>This installer bundles the following plugins by Matthias Pueski:</p>
 <ul>$PLUGIN_LIST_HTML</ul>
 <p>On the next screens you can pick the formats (Audio Unit / VST3) and the
 individual plugins you wish to install.</p>
-</body></html>"
+</body></html>
+HTML
+    fi
 
-write_if_missing "$RESOURCES_DIR/license.html" "<html><body>
+    cat > "$res_dir/license.html" <<HTML
+<html><body>
 <h2>License</h2>
 <p>Copyright &copy; $YEAR Matthias Pueski. All rights reserved.</p>
 <p>This software is provided &quot;as is&quot;, without warranty of any kind.</p>
-</body></html>"
+</body></html>
+HTML
 
-write_if_missing "$RESOURCES_DIR/readme.html" "<html><body>
-<h2>$TOP_TITLE $VERSION &mdash; Read Me</h2>
+    cat > "$res_dir/readme.html" <<HTML
+<html><body>
+<h2>$title $VERSION &mdash; Read Me</h2>
 <p>After installation, restart your DAW and rescan your plugin folders.</p>
 <ul>
   <li>Audio Units &rarr; <code>/Library/Audio/Plug-Ins/Components</code></li>
   <li>VST3 &rarr; <code>/Library/Audio/Plug-Ins/VST3</code></li>
 </ul>
-</body></html>"
+</body></html>
+HTML
 
-# ── Final product package ────────────────────────────────────────────────────
-OUTPUT_PKG="$OUTPUT_DIR/${INSTALLER_NAME}-${VERSION}.pkg"
+    # ── Final product package ─────────────────────────────────────────────────
+    local out_pkg="$OUTPUT_DIR/${name}-${VERSION}.pkg"
+    echo "==> Building installer: $out_pkg"
+    productbuild \
+        --distribution "$dist_xml" \
+        --resources    "$res_dir" \
+        --package-path "$PKG_DIR" \
+        "$out_pkg"
+    OUTPUT_PKGS+=("$out_pkg")
+}
 
-echo "==> Building final installer: $OUTPUT_PKG"
-productbuild \
-    --distribution "$DIST_XML" \
-    --resources    "$RESOURCES_DIR" \
-    --package-path "$PKG_DIR" \
-    "$OUTPUT_PKG"
+# ── Build the requested installer(s) ─────────────────────────────────────────
+if (( EACH )); then
+    for plugin in "${PLUGINS[@]}"; do
+        build_installer "$plugin" "$plugin" "$plugin"
+    done
+else
+    if [[ -n "$NAME" ]]; then
+        build_installer "$NAME" "$NAME" "${PLUGINS[@]}"
+    elif [[ ${#PLUGINS[@]} -eq 1 ]]; then
+        build_installer "${PLUGINS[0]}" "${PLUGINS[0]}" "${PLUGINS[@]}"
+    else
+        build_installer "$SUITE_NAME" "$SUITE_TITLE" "${PLUGINS[@]}"
+    fi
+fi
 
 echo ""
 echo "════════════════════════════════════════════════════════════════════"
-echo "  Installer ready: $OUTPUT_PKG"
+if [[ ${#OUTPUT_PKGS[@]} -eq 1 ]]; then
+    echo "  Installer ready: ${OUTPUT_PKGS[0]}"
+else
+    echo "  ${#OUTPUT_PKGS[@]} installers ready:"
+    printf '    %s\n' "${OUTPUT_PKGS[@]}"
+fi
 echo ""
 echo "  Plugins included: ${PLUGINS[*]}"
 echo "  Formats included: ${FORMATS[*]}"
 echo ""
-echo "  Open with:    open \"$OUTPUT_PKG\""
-echo "  Or install:   sudo installer -pkg \"$OUTPUT_PKG\" -target /"
+echo "  Open with:    open \"${OUTPUT_PKGS[0]}\""
+echo "  Or install:   sudo installer -pkg \"${OUTPUT_PKGS[0]}\" -target /"
 echo "════════════════════════════════════════════════════════════════════"

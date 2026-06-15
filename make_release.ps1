@@ -11,7 +11,15 @@
     Installer version (first positional arg). Default: 1.0.0.
 
 .PARAMETER Plugins
-    Subset of plugins to build and package. Default: all.
+    Subset of plugins to build and package. Default: all. A single plugin
+    produces an installer named after that plugin (e.g. Pike-1.0.0.exe).
+
+.PARAMETER Name
+    Override the installer name/title (forwarded to create_installer.ps1).
+
+.PARAMETER Each
+    Build one standalone installer per selected plugin (forwarded to
+    create_installer.ps1).
 
 .PARAMETER Projucer
     Path to Projucer.exe (forwarded to build_all.ps1).
@@ -36,6 +44,10 @@
 .EXAMPLE
     .\make_release.ps1 2.1.0 -Plugins AF-1,Lupo -Projucer F:\devel\JUCE8\Projucer.exe
 .EXAMPLE
+    .\make_release.ps1 2.1.0 -Plugins Pike           # single-plugin installer
+.EXAMPLE
+    .\make_release.ps1 2.1.0 -Each                   # one installer per plugin
+.EXAMPLE
     .\make_release.ps1 2.1.0 -SkipBuild
 #>
 [CmdletBinding()]
@@ -44,6 +56,8 @@ param(
     [string]   $Version = '1.0.0',
     [string[]] $Plugins,
     [string[]] $Exclude = @('CrashTestDummy'),
+    [string]   $Name,
+    [switch]   $Each,
     [string]   $Projucer,
     [string]   $JuceModules,
     [string]   $AsioSdk,
@@ -81,6 +95,8 @@ Write-Host "====================================================================
 $instArgs = @{ Version = $Version }
 if ($Plugins) { $instArgs.Plugins = $Plugins }
 if ($Exclude) { $instArgs.Exclude = $Exclude }
+if ($Name)    { $instArgs.Name    = $Name }
+if ($Each)    { $instArgs.Each    = $true }
 if ($Iscc)    { $instArgs.Iscc    = $Iscc }
 
 & (Join-Path $ScriptDir 'create_installer.ps1') @instArgs

@@ -85,6 +85,18 @@ public:
     /** Record/playback of EQ-handle automation (the "animated equalizer"). */
     pike::EQAutomationTrack& getEqAutomation() noexcept { return eqAuto; }
 
+    /** Re-reads the local license state (called by the editor after a successful
+        in-plugin activation). When not activated, processBlock outputs silence. */
+    void refreshLicenseState();
+
+    /** True when a valid local activation was found. The editor mirrors this to
+        decide whether to show the activation overlay. */
+    bool isLicensed() const noexcept { return licensed.load (std::memory_order_relaxed); }
+
+    /** True while the 30-day demo is running and the plugin is not (yet) licensed.
+        Audio passes in this state; the editor lets the user skip activation. */
+    bool isDemoActive() const noexcept { return demoActive.load (std::memory_order_relaxed); }
+
     static constexpr int numVoices = 24;
 
 private:
@@ -151,6 +163,12 @@ private:
     // Visualisation data published to the editor.
     pike::VisualState visualState;
     int heldNoteCount = 0;
+
+    // License gate: when neither is true, processBlock outputs silence. Set at
+    // construction from the local activation/trial files and refreshed via
+    // refreshLicenseState().
+    std::atomic<bool> licensed   { false };
+    std::atomic<bool> demoActive { false };
 
     /** Caches the APVTS atomics the voices read each block. */
     void cacheParameterPointers();

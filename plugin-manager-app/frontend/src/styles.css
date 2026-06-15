@@ -1,0 +1,220 @@
+/* ============================================================
+   App theme — light "Pueski Audio" look (cyan accent, techy HUD
+   typography) to match the landing page. Fonts (Orbitron / Share
+   Tech Mono / Exo 2) are loaded in public/index.html.
+   ============================================================ */
+:root {
+  --bg: #eef6fa;
+  --panel: #ffffff;
+  --panel-2: #e3f0f5;
+  --text: #0e2a35;
+  --muted: #5a7d8a;
+  --cyan: #00d4ff;
+  --primary: #0097c2;
+  --primary-hover: #007fa6;
+  --danger: #e23b5a;
+  --border: rgba(0, 150, 180, 0.22);
+  --glow: rgba(0, 212, 255, 0.30);
+}
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  font-family: "Exo 2", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* faint cyan tech grid, ties the app to the landing's aesthetic */
+  background:
+    linear-gradient(0deg, rgba(0, 170, 210, 0.045) 1px, transparent 1px) 0 0 / 64px 64px,
+    linear-gradient(90deg, rgba(0, 170, 210, 0.045) 1px, transparent 1px) 0 0 / 64px 64px,
+    var(--bg);
+  color: var(--text);
+}
+h1, h2, h3 {
+  font-family: "Orbitron", "Exo 2", sans-serif;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+a { color: var(--primary); text-decoration: none; }
+a:hover { color: var(--primary-hover); }
+
+.navbar {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.9rem 1.5rem;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.navbar .brand {
+  font-family: "Orbitron", sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.navbar .spacer { flex: 1; }
+.navbar a {
+  color: var(--muted);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.navbar a:hover { color: var(--text); }
+.navbar a.active { color: var(--primary); }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+
+.btn {
+  background: var(--primary);
+  color: #fff;
+  border: 1px solid transparent;
+  padding: 0.55rem 1.05rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: background 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+.btn:hover { background: var(--primary-hover); box-shadow: 0 4px 18px var(--glow); }
+.btn.secondary { background: #fff; color: var(--text); border: 1px solid var(--border); }
+.btn.secondary:hover { border-color: var(--cyan); box-shadow: 0 0 0 3px var(--glow); }
+.btn.danger { background: var(--danger); }
+.btn.danger:hover { background: #c52d49; box-shadow: 0 4px 18px rgba(226, 59, 90, 0.3); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+.input, .textarea, select {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.input:focus, .textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px var(--glow);
+}
+.textarea { min-height: 100px; }
+label {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--muted);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.field { margin-bottom: 1rem; }
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 2px rgba(0, 120, 150, 0.05);
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+.product-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.product-card:hover {
+  border-color: var(--cyan);
+  box-shadow: 0 8px 26px var(--glow);
+  transform: translateY(-2px);
+}
+.product-card img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  background: #0a1418; /* product shots are dark UIs — keep a dark mat */
+}
+.product-card .body { padding: 1rem; flex: 1; display: flex; flex-direction: column; }
+.product-card h3 { margin: 0 0 0.5rem; font-size: 1.05rem; }
+.product-card .price {
+  font-family: "Orbitron", sans-serif;
+  font-weight: 700;
+  color: var(--primary);
+  margin-top: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+th, td {
+  text-align: left;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+th {
+  background: var(--panel-2);
+  color: var(--muted);
+  font-family: "Share Tech Mono", monospace;
+  font-weight: 400;
+  font-size: 0.76rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: rgba(0, 212, 255, 0.04); }
+
+.alert { padding: 0.75rem 1rem; border-radius: 6px; margin: 0.5rem 0; font-size: 0.92rem; }
+.alert.error { background: #fdecee; color: #b3243f; border: 1px solid #f3c2cb; }
+.alert.success { background: #e3f7ee; color: #1a7a4f; border: 1px solid #b8e6cf; }
+
+.muted { color: var(--muted); }
+.row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.tag {
+  background: var(--panel-2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.tag.active { color: #0f7a4e; background: #e0f6ec; }
+.tag.revoked { color: #b3243f; background: #fbe4e8; }
+hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+.admin-nav { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.admin-nav a {
+  padding: 0.4rem 0.85rem;
+  border-radius: 4px;
+  color: var(--muted);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+.admin-nav a:hover { color: var(--text); border-color: var(--border); }
+.admin-nav a.active { background: var(--panel); color: var(--primary); border-color: var(--border); }

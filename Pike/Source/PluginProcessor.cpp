@@ -11,6 +11,7 @@
 #include "params/ParameterLayout.h"
 #include "params/ParameterIDs.h"
 #include "synth/PikeSound.h"
+#include "Licensing/LicenseManager.h"
 
 //==============================================================================
 PikeAudioProcessor::PikeAudioProcessor()
@@ -45,6 +46,30 @@ PikeAudioProcessor::PikeAudioProcessor()
         synth.addVoice (new pike::PikeVoice (voiceParameters));
 
     synth.setNoteStealingEnabled (true);
+
+    // License gate: initialise libsodium and read the local activation state.
+    // No network here — that only happens when the user activates in the editor.
+    LicenseManager::initCrypto();
+
+    // Anchor the 30-day demo window to the first ever run, regardless of license
+    // state. This way the clock cannot be reset by activating first and deactivating
+    // later, and a deactivation correctly falls back to whatever demo time is left
+    // (rather than reading "expired" because no trial was ever started). While
+    // unlicensed and within the window, audio passes and activation is skippable.
+    LicenseManager::getInstance()->ensureTrialStarted();
+
+    refreshLicenseState();
+}
+
+void PikeAudioProcessor::refreshLicenseState()
+{
+    auto* lm = LicenseManager::getInstance();
+    const bool isLicensed = (lm->verifyLocal() == ActivationState::Activated);
+    licensed.store (isLicensed, std::memory_order_relaxed);
+
+    // Demo only matters while not (yet) licensed; once the 30 days are up, the
+    // hard gate (silence) returns until the user activates.
+    demoActive.store (! isLicensed && lm->isTrialActive(), std::memory_order_relaxed);
 }
 
 void PikeAudioProcessor::cacheParameterPointers()
@@ -400,6 +425,13 @@ void PikeAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             wR[i] = mid - side;
         }
     }
+
+    // License gate: silence the output unless the plugin is activated or the
+    // 30-day demo is still running. The editor shows the activation overlay; the
+    // meters below then read this (possibly muted) buffer.
+    if (! licensed.load (std::memory_order_relaxed)
+        && ! demoActive.load (std::memory_order_relaxed))
+        buffer.clear();
 
     // ----- publish visualisation data (realtime-safe) -----
     const int   numCh = buffer.getNumChannels();

@@ -1,0 +1,154 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum LicenseStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum Platform {
+  MAC
+  WINDOWS
+}
+
+enum PluginFormat {
+  AU
+  VST3
+}
+
+model User {
+  id             String               @id @default(uuid())
+  email          String               @unique
+  passwordHash   String
+  name           String?
+  role           Role                 @default(USER)
+  apiToken       String?              @unique
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  orders         Order[]
+  licenses       License[]
+  passwordResets PasswordResetToken[]
+}
+
+// Password-reset / set-password tokens. Only the SHA-256 hash of the token is
+// stored; the raw token travels in the emailed link.
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model Product {
+  id            String     @id @default(uuid())
+  slug          String     @unique
+  name          String
+  description   String
+  priceCents    Int
+  currency      String     @default("EUR")
+  imageUrl      String?
+  version       String     @default("1.0.0")
+  active        Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  orderItems    OrderItem[]
+  licenses      License[]
+  productFiles  ProductFile[]
+}
+
+model ProductFile {
+  id          String       @id @default(uuid())
+  productId   String
+  product     Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  platform    Platform
+  format      PluginFormat
+  fileName    String
+  fileSize    Int
+  createdAt   DateTime     @default(now())
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status          OrderStatus @default(PENDING)
+  totalCents      Int
+  currency        String      @default("EUR")
+  stripeSessionId String?     @unique
+  stripePaymentIntentId String? @unique
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  items           OrderItem[]
+  licenses        License[]
+}
+
+model OrderItem {
+  id          String   @id @default(uuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  priceCents  Int
+  quantity    Int      @default(1)
+}
+
+model License {
+  id             String         @id @default(uuid())
+  key            String         @unique
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product        @relation(fields: [productId], references: [id])
+  orderId        String?
+  order          Order?         @relation(fields: [orderId], references: [id])
+  status         LicenseStatus  @default(ACTIVE)
+  expiresAt      DateTime?
+  maxActivations Int            @default(3)
+  activations    Activation[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+// One row per (license, machine). Soft-machine-binding: each distinct machineId
+// occupies one seat; reactivating the same machine reuses its row. Seat counting
+// (maxActivations per license) happens here, server-side.
+model Activation {
+  id         String   @id @default(uuid())
+  licenseId  String
+  license    License  @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+  machineId  String
+  appVersion String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([licenseId, machineId])
+}
+
+model SystemConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
